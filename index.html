@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#EDEEF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12131A" media="(prefers-color-scheme: dark)">
+<title>Boya Savaşı</title>
+<meta name="description" content="Gerçek oyuncularla 60 saniyelik turlarda ortak tahtayı boya, en çok hücreyi kap. Kayıt yok, indirme yok.">
+<meta property="og:title" content="Boya Savaşı">
+<meta property="og:description" content="Gerçek oyuncularla 60 saniyelik turlarda ortak tahtayı boya, en çok hücreyi kap.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='9' height='9' rx='2' fill='%23F2452F'/%3E%3Crect x='11.5' y='1' width='9' height='9' rx='2' fill='%232D5BFF'/%3E%3Crect x='22' y='1' width='9' height='9' rx='2' fill='%23F5B800'/%3E%3Crect x='1' y='11.5' width='9' height='9' rx='2' fill='%2300A38F'/%3E%3Crect x='11.5' y='11.5' width='9' height='9' rx='2' fill='%23EF4F9B'/%3E%3Crect x='22' y='11.5' width='9' height='9' rx='2' fill='%2338B24E'/%3E%3Crect x='1' y='22' width='9' height='9' rx='2' fill='%238450F0'/%3E%3Crect x='11.5' y='22' width='9' height='9' rx='2' fill='%23FF8A1F'/%3E%3Crect x='22' y='22' width='9' height='9' rx='2' fill='%2300A7E1'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Mono:wght@500&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Düzen: solda kare boya tahtası ve tur sayacı, sağda canlı skor tablosu; telefonda alt alta. */
+:root{
+  --bg:#EDEEF3;
+  --surface:#FFFFFF;
+  --ink:#1B1D2A;
+  --muted:#62667D;
+  --line:#D5D8E4;
+  --cell:#E0E2EC;
+  --cell-hi:#CFD3E2;
+  --on-ink:#FFFFFF;
+  --overlay:rgba(237,238,243,.88);
+  --live:#2FB457;
+  --bad:#D13B2E;
+  --f-display:'Bricolage Grotesque','Arial Black',system-ui,sans-serif;
+  --f-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12131A;--surface:#1B1D28;--ink:#F1F2F8;--muted:#9A9EB5;--line:#2C2F3F;
+    --cell:#262938;--cell-hi:#343850;--on-ink:#12131A;--overlay:rgba(18,19,26,.88);--bad:#FF7A6E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12131A;--surface:#1B1D28;--ink:#F1F2F8;--muted:#9A9EB5;--line:#2C2F3F;
+  --cell:#262938;--cell-hi:#343850;--on-ink:#12131A;--overlay:rgba(18,19,26,.88);--bad:#FF7A6E;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 var(--f-body);-webkit-text-size-adjust:100%}
+.app{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:calc(18px + env(safe-area-inset-top,0px)) calc(32px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{display:grid;grid-template-columns:repeat(3,11px);gap:2px;flex:none}
+.logo i{display:block;width:11px;height:11px;border-radius:3px}
+h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.room{display:flex;align-items:center;gap:10px;font:500 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--live)}
+.room b{color:var(--ink);font-weight:500}
+.mini{font:700 12px var(--f-body);letter-spacing:0;text-transform:none;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.mini:hover{background:var(--cell)}
+.mini:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.game{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}
+@media (max-width:760px){.game{grid-template-columns:minmax(0,1fr)}}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+.clock{display:flex;align-items:center;gap:12px}
+.bar{flex:1;height:10px;background:var(--cell);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--ink);transform-origin:left center;border-radius:5px}
+.bar.rest i{background:var(--muted)}
+.clock b{font:500 24px/1 var(--f-mono);min-width:2.6ch;text-align:right;font-variant-numeric:tabular-nums}
+.clock small{font:500 11px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:9ch}
+
+.board-wrap{position:relative;width:100%;max-width:560px}
+.board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;aspect-ratio:1;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair;border-radius:8px}
+.board:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.cell{background:var(--cell);border-radius:5px;transition:background-color .12s}
+.cell:hover{background-color:var(--cell-hi)}
+.cell.mine{box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+.cell.kf{outline:2px solid var(--ink);outline-offset:1px}
+.cell.pop{animation:pop .18s ease-out}
+@keyframes pop{from{transform:scale(.8)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.cell.pop{animation:none}.cell{transition:none}}
+
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:16px;background:var(--overlay);border-radius:8px;backdrop-filter:blur(3px)}
+.overlay .t{font:500 12px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.overlay .n{font:800 clamp(28px,8vw,44px)/1.05 var(--f-display);letter-spacing:-.02em;overflow-wrap:anywhere;text-wrap:balance}
+.overlay .s{font:500 15px var(--f-mono)}
+
+.actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;max-width:560px}
+.btn{font:700 15px var(--f-body);background:var(--ink);color:var(--on-ink);border:0;border-radius:10px;padding:11px 18px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.btn.armed{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--ink)}
+.pips{display:flex;gap:4px}
+.pips i{width:12px;height:6px;border-radius:3px;background:var(--cell)}
+.pips i.on{background:var(--ink)}
+.hint{margin:0;color:var(--muted);font-size:14px;flex:1;min-width:12ch}
+
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.side h2{margin:0;font:700 13px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.row{display:grid;grid-template-columns:20px 14px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;position:relative;overflow:hidden}
+.row .rk{font:500 12px var(--f-mono);color:var(--muted)}
+.row .sw{width:14px;height:14px;border-radius:4px}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.row .nm em{font-style:normal;color:var(--muted);font-weight:400}
+.row .ct{font:500 15px var(--f-mono);font-variant-numeric:tabular-nums}
+.row .fill{position:absolute;left:0;bottom:0;height:3px;opacity:.9}
+.empty{color:var(--muted);font-size:14px;margin:0}
+.rules{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+
+.join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--overlay);z-index:10;backdrop-filter:blur(6px);overflow-y:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;margin:auto}
+.card h2{margin:0;font:800 28px/1.1 var(--f-display);letter-spacing:-.02em}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.card p.err{color:var(--bad)}
+.card .lb{font:500 12px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.card input[type=text]{font:500 17px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+.card input[type=text]:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.swatches{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sw2{position:relative;display:block}
+.sw2 input{position:absolute;opacity:0;pointer-events:none}
+.sw2 span{display:block;aspect-ratio:1;border-radius:10px;border:3px solid transparent;cursor:pointer}
+.sw2 input:checked+span{border-color:var(--ink);box-shadow:inset 0 0 0 3px var(--surface)}
+.sw2 input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
+.sep{display:flex;align-items:center;gap:10px;font:500 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.codeRow{display:flex;gap:8px}
+.codeRow input{flex:1;text-transform:uppercase;letter-spacing:.12em}
+.codeRow input::placeholder{text-transform:none;letter-spacing:0}
+.noscript{padding:24px;text-align:center}
+</style>
+</head>
+<body>
+<noscript><p class="noscript">Boya Savaşı'nı oynamak için JavaScript gerekiyor.</p></noscript>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" id="logo" aria-hidden="true"></div>
+      <h1>Boya Savaşı</h1>
+    </div>
+    <div class="room" id="roomInfo" hidden>
+      <span class="dot" id="dot"></span>
+      <span id="roomText">Bağlanıyor</span>
+      <button class="mini" id="inviteBtn" type="button">Davet et</button>
+    </div>
+  </header>
+
+  <main class="game">
+    <section class="stage">
+      <div class="clock">
+        <div class="bar" id="bar"><i id="barFill"></i></div>
+        <b id="clockNum">60</b>
+        <small id="clockLbl">sn kaldı</small>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board" tabindex="0" role="group" aria-label="Boya tahtası. Ok tuşlarıyla gez, boşluk tuşuyla boya, B tuşuyla bomba kullan."></div>
+        <div class="overlay" id="overlay" hidden aria-live="polite">
+          <div class="t" id="ovT"></div>
+          <div class="n" id="ovN"></div>
+          <div class="s" id="ovS"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="bombBtn" type="button" aria-pressed="false" disabled>Bomba: 0</button>
+        <div class="pips" id="pips" aria-hidden="true"></div>
+        <p class="hint" id="hint">Katılmak için adını yaz.</p>
+      </div>
+    </section>
+
+    <aside class="side">
+      <h2>Skor tablosu</h2>
+      <ol class="scores" id="scores"></ol>
+      <p class="rules">Bir hücreye dokun ya da parmağını sürükle. Hücreyi en son boyayan sahibi olur. Her 6 boyamada bir bomba kazanırsın; bomba 3×3 alanı tek dokunuşta boyar. 60 saniye sonunda en çok hücreye sahip olan turu kazanır, 8 saniye sonra yeni tur başlar. Odada tek başınaysan iki bot seninle oynar, bir arkadaşın girince botlar çıkar.</p>
+    </aside>
+  </main>
+</div>
+
+<div class="join" id="join">
+  <form class="card" id="joinForm" autocomplete="off">
+    <h2>Savaşa katıl</h2>
+    <p>Gerçek oyuncularla 60 saniyelik boya turları. Kayıt yok.</p>
+    <label class="lb" for="nameInput">Adın</label>
+    <input type="text" id="nameInput" maxlength="14" placeholder="Örn. Elif" enterkeyhint="go">
+    <span class="lb" id="inkLbl">Mürekkebin</span>
+    <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="inkLbl"></div>
+    <button class="btn" type="submit" id="quickBtn">Hızlı oyun</button>
+    <div class="sep">veya arkadaşlarınla</div>
+    <label class="lb" for="codeInput">Oda kodu</label>
+    <div class="codeRow">
+      <input type="text" id="codeInput" maxlength="8" placeholder="Örn. K7M2" aria-describedby="codeNote">
+      <button class="btn ghost" type="button" id="roomBtn">Odaya gir</button>
+    </div>
+    <p id="codeNote">Kodu boş bırakırsan yeni bir özel oda kurulur. Odanın kodunu ya da davet linkini arkadaşlarına gönder.</p>
+    <p id="joinMsg" aria-live="polite"></p>
+  </form>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var INKS=['#F2452F','#2D5BFF','#F5B800','#00A38F','#EF4F9B','#38B24E','#8450F0','#FF8A1F','#00A7E1','#A8CC00','#A0613A','#7E8AA6'];
+var INK_NAMES=['Kırmızı','Mavi','Sarı','Turkuaz','Pembe','Yeşil','Mor','Turuncu','Gök mavisi','Limon','Kahve','Çelik'];
+var cfg={cols:12,rows:12,play:60000,rest:8000,bombEvery:6,bombMax:3};
+var N=cfg.cols*cfg.rows;
+var CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function $(id){return document.getElementById(id);}
+function el(tag,cls,text){var d=document.createElement(tag);if(cls)d.className=cls;if(text!=null)d.textContent=text;return d;}
+function cleanName(s){
+  var str=String(s==null?'':s),out='';
+  for(var j=0;j<str.length;j++){
+    var c=str.charCodeAt(j);
+    if(c<32||c===127||(c>=0x200b&&c<=0x200f)||(c>=0x2028&&c<=0x202e)||(c>=0x2060&&c<=0x206f)||c===0xfeff)continue;
+    out+=str.charAt(j);
+  }
+  return Array.from(out.trim()).slice(0,14).join('');
+}
+function cleanCode(s){
+  return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
+}
+function randomCode(){
+  var c='';
+  for(var i=0;i<4;i++)c+=CODE_ALPHABET.charAt(Math.floor(Math.random()*CODE_ALPHABET.length));
+  return c;
+}
+function blast(i){
+  var r=Math.floor(i/cfg.cols),c=i%cfg.cols,out=[];
+  for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
+    var rr=r+dr,cc=c+dc;
+    if(rr>=0&&rr<cfg.rows&&cc>=0&&cc<cfg.cols)out.push(rr*cfg.cols+cc);
+  }
+  return out;
+}
+
+var board=$('board'),overlay=$('overlay'),joinEl=$('join');
+var me={name:'',color:0,joined:false,bombs:0,taps:0,armed:false};
+var ws=null,online=false,pending=false,retryMs=1000,retryTimer=0;
+var target={mode:'quick',code:''};
+var myId=-1,code='',players=new Map(),cells=new Array(N).fill(-1);
+var playing=false,phaseEnd=0,result=null;
+var rafPending=false,kf=0,lastOv='',cellKey=new Array(N).fill('');
+
+/* logo, board, pips, swatches */
+[0,1,2,3,4,5,6,7,8].forEach(function(i){var d=el('i');d.style.background=INKS[i];$('logo').appendChild(d);});
+var cellEls=[];
+for(var i=0;i<N;i++){var d=el('div','cell');board.appendChild(d);cellEls.push(d);}
+var pipEls=[];
+for(var p=0;p<cfg.bombEvery;p++){var pe=el('i');$('pips').appendChild(pe);pipEls.push(pe);}
+var swatchEls=[];
+INKS.forEach(function(c,idx){
+  var lab=el('label','sw2');
+  var inp=document.createElement('input');
+  inp.type='radio';inp.name='ink';inp.value=String(idx);inp.id='ink'+idx;
+  inp.setAttribute('aria-label',INK_NAMES[idx]);
+  var sp=el('span');sp.style.background=c;
+  lab.appendChild(inp);lab.appendChild(sp);
+  $('swatches').appendChild(lab);
+  swatchEls.push(inp);
+});
+function selectInk(idx){swatchEls.forEach(function(s,j){s.checked=(j===idx);});}
+function selectedInk(){for(var j=0;j<swatchEls.length;j++)if(swatchEls[j].checked)return j;return 0;}
+
+/* saved name and ink, room code from the link */
+var saved={};
+try{saved=JSON.parse(localStorage.getItem('boya-savasi')||'{}')||{};}catch(e){saved={};}
+$('nameInput').value=cleanName(saved.name||'');
+selectInk(Number.isInteger(saved.color)&&saved.color>=0&&saved.color<INKS.length?saved.color:Math.floor(Math.random()*INKS.length));
+try{
+  var fromLink=cleanCode(new URLSearchParams(location.search).get('oda'));
+  if(fromLink.length>=3){
+    $('codeInput').value=fromLink;
+    $('joinMsg').textContent=fromLink+' odasına davet edildin. Adını yazıp Odaya gir de.';
+  }
+}catch(e){}
+
+/* connection */
+function send(obj){
+  if(ws&&ws.readyState===1){try{ws.send(JSON.stringify(obj));}catch(e){}}
+}
+function setJoinBusy(busy){
+  $('quickBtn').disabled=busy;$('roomBtn').disabled=busy;
+}
+function joinMessage(text,isErr){
+  var m=$('joinMsg');m.textContent=text;m.classList.toggle('err',!!isErr);
+}
+function connect(){
+  clearTimeout(retryTimer);
+  var sock;
+  try{sock=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');}
+  catch(e){onDown();return;}
+  ws=sock;
+  sock.onopen=function(){
+    if(ws!==sock)return;
+    send({t:'join',n:me.name,c:me.color,mode:target.mode,code:target.code});
+  };
+  sock.onmessage=function(ev){
+    if(ws!==sock)return;
+    var m;
+    try{m=JSON.parse(ev.data);}catch(e){return;}
+    if(m&&typeof m==='object')handle(m);
+  };
+  sock.onclose=function(){
+    if(ws!==sock)return;
+    ws=null;onDown();
+  };
+  sock.onerror=function(){};
+}
+function onDown(){
+  online=false;
+  if(me.joined){
+    retryTimer=setTimeout(connect,retryMs);
+    retryMs=Math.min(retryMs*2,8000);
+  }else if(pending){
+    pending=false;setJoinBusy(false);
+    joinMessage('Sunucuya bağlanılamadı. Biraz sonra tekrar dene.',true);
+  }
+  schedule();
+}
+function startJoin(mode,roomCode){
+  var n=cleanName($('nameInput').value);
+  if(!n)n='Oyuncu '+(10+Math.floor(Math.random()*90));
+  me.name=n;me.color=selectedInk();
+  try{localStorage.setItem('boya-savasi',JSON.stringify({name:n,color:me.color}));}catch(e){}
+  target={mode:mode,code:roomCode};
+  pending=true;setJoinBusy(true);joinMessage('Bağlanıyor…',false);
+  connect();
+}
+$('joinForm').addEventListener('submit',function(e){e.preventDefault();startJoin('quick','');});
+$('roomBtn').addEventListener('click',function(){
+  var c=cleanCode($('codeInput').value);
+  if(!c)c=randomCode();
+  if(c.length<3){joinMessage('Oda kodu en az 3 harf ya da rakam olmalı.',true);return;}
+  $('codeInput').value=c;
+  startJoin('code',c);
+});
+
+/* messages from the server */
+function handle(m){
+  var i;
+  if(m.t==='hi'){
+    myId=m.id;code=m.code;
+    if(m.cfg&&m.cfg.cols===cfg.cols&&m.cfg.rows===cfg.rows)cfg=m.cfg;
+    players=new Map();(m.players||[]).forEach(function(p){players.set(p.id,p);});
+    cells=Array.isArray(m.cells)&&m.cells.length===N?m.cells.slice():new Array(N).fill(-1);
+    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
+    me.bombs=m.b|0;me.taps=m.k|0;me.armed=false;
+    result=m.res||null;
+    online=true;retryMs=1000;pending=false;me.joined=true;
+    target={mode:'code',code:code};
+    joinEl.hidden=true;setJoinBusy(false);
+    try{history.replaceState(null,'','?oda='+code);}catch(e){}
+    try{board.focus({preventScroll:true});}catch(e){}
+  }else if(m.t==='pl'){
+    players=new Map();(m.p||[]).forEach(function(p){players.set(p.id,p);});
+  }else if(m.t==='c'){
+    var list=m.c||[];
+    for(i=0;i<list.length;i++){
+      var e=list[i];
+      if(Array.isArray(e)&&e[0]>=0&&e[0]<N)cells[e[0]]=e[1];
+    }
+  }else if(m.t==='n'){
+    for(i=0;i<N;i++)cells[i]=-1;
+    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
+    result=null;me.armed=false;me.bombs=0;me.taps=0;
+  }else if(m.t==='w'){
+    playing=false;result={ids:m.ids||[],score:m.score|0};
+    (m.wins||[]).forEach(function(w){var p=players.get(w[0]);if(p)p.w=w[1];});
+  }else if(m.t==='p'){
+    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
+  }else if(m.t==='m'){
+    me.bombs=m.b|0;me.taps=m.k|0;
+    if(me.bombs<1)me.armed=false;
+  }else if(m.t==='err'){
+    var s=ws;ws=null;
+    try{if(s)s.close();}catch(e){}
+    pending=false;me.joined=false;online=false;setJoinBusy(false);
+    joinMessage(m.m==='full'?'Bu oda dolu. Başka bir oda dene.':'Odaya girilemedi.',true);
+  }
+  schedule();
+}
+
+/* painting */
+function paint(idx,fromDrag){
+  if(!me.joined||!online||!playing)return;
+  var useBomb=!fromDrag&&me.armed&&me.bombs>0;
+  if(useBomb){
+    blast(idx).forEach(function(c){cells[c]=myId;});
+    me.bombs--;me.armed=false;
+  }else{
+    cells[idx]=myId;
+  }
+  send({t:'paint',i:idx,b:useBomb});
+  schedule();
+}
+function cellAt(x,y){
+  var r=board.getBoundingClientRect();
+  var fx=(x-r.left)/r.width,fy=(y-r.top)/r.height;
+  if(fx<0||fx>=1||fy<0||fy>=1)return -1;
+  return Math.floor(fy*cfg.rows)*cfg.cols+Math.floor(fx*cfg.cols);
+}
+var dragging=false,lastDrag=-1;
+board.addEventListener('pointerdown',function(e){
+  var i=cellAt(e.clientX,e.clientY);
+  if(i<0)return;
+  e.preventDefault();
+  dragging=true;lastDrag=i;kf=i;
+  try{board.setPointerCapture(e.pointerId);}catch(err){}
+  paint(i,false);
+});
+board.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  var i=cellAt(e.clientX,e.clientY);
+  if(i>=0&&i!==lastDrag){lastDrag=i;kf=i;paint(i,true);}
+});
+['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){
+  board.addEventListener(ev,function(){dragging=false;lastDrag=-1;});
+});
+board.addEventListener('keydown',function(e){
+  var k=e.key,handled=true;
+  if(k==='ArrowLeft'){if(kf%cfg.cols>0)kf--;}
+  else if(k==='ArrowRight'){if(kf%cfg.cols<cfg.cols-1)kf++;}
+  else if(k==='ArrowUp'){if(kf>=cfg.cols)kf-=cfg.cols;}
+  else if(k==='ArrowDown'){if(kf<N-cfg.cols)kf+=cfg.cols;}
+  else if(k===' '||k==='Enter'){paint(kf,false);}
+  else if(k==='b'||k==='B'){toggleBomb();}
+  else handled=false;
+  if(handled){e.preventDefault();schedule();}
+});
+function toggleBomb(){
+  if(!me.joined||!playing||me.bombs<1)return;
+  me.armed=!me.armed;
+  schedule();
+}
+$('bombBtn').addEventListener('click',toggleBomb);
+
+/* invite */
+function flash(text){
+  var b=$('inviteBtn');b.textContent=text;
+  setTimeout(function(){b.textContent='Davet et';},1600);
+}
+function manualCopy(link){
+  try{window.prompt('Davet linki (kopyala):',link);}catch(e){}
+}
+$('inviteBtn').addEventListener('click',function(){
+  if(!code)return;
+  var link=location.origin+location.pathname+'?oda='+code;
+  function copy(){
+    try{
+      navigator.clipboard.writeText(link).then(function(){flash('Kopyalandı');},function(){manualCopy(link);});
+    }catch(e){manualCopy(link);}
+  }
+  if(navigator.share){
+    navigator.share({title:'Boya Savaşı',text:'Boya Savaşı odama katıl!',url:link}).catch(function(err){
+      if(!err||err.name!=='AbortError')copy();
+    });
+  }else copy();
+});
+
+/* render */
+function schedule(){
+  if(rafPending)return;
+  rafPending=true;
+  requestAnimationFrame(render);
+}
+function render(){
+  rafPending=false;
+  var i;
+
+  /* scores from the board itself, so painting feels instant */
+  var counts=new Map();
+  for(i=0;i<N;i++){var o=cells[i];if(o>=0)counts.set(o,(counts.get(o)||0)+1);}
+
+  /* board */
+  for(i=0;i<N;i++){
+    var owner=cells[i],pl=owner>=0?players.get(owner):null;
+    var key=pl?owner+':'+pl.c:'';
+    if(key!==cellKey[i]){
+      cellKey[i]=key;
+      var d=cellEls[i];
+      if(!pl){d.style.background='';d.classList.remove('mine');}
+      else{
+        d.style.background=INKS[pl.c%INKS.length];
+        d.classList.toggle('mine',owner===myId);
+        d.classList.remove('pop');void d.offsetWidth;d.classList.add('pop');
+      }
+    }
+    cellEls[i].classList.toggle('kf',document.activeElement===board&&i===kf);
+  }
+
+  /* clock */
+  var left=Math.max(0,phaseEnd-performance.now());
+  var total=playing?cfg.play:cfg.rest;
+  $('clockNum').textContent=String(Math.ceil(left/1000));
+  $('clockLbl').textContent=playing?'sn kaldı':'sn sonra yeni tur';
+  $('bar').classList.toggle('rest',!playing);
+  $('barFill').style.transform='scaleX('+Math.max(0,Math.min(1,left/total))+')';
+
+  /* scoreboard */
+  var list=Array.from(players.values());
+  list.sort(function(a,b){
+    return ((counts.get(b.id)||0)-(counts.get(a.id)||0))||(a.n<b.n?-1:(a.n>b.n?1:0));
+  });
+  var ul=$('scores');
+  while(ul.firstChild)ul.removeChild(ul.firstChild);
+  if(!list.length){
+    var li0=el('li');li0.appendChild(el('p','empty','Henüz oyuncu yok. Katıl ve ilk boyayı sen at.'));
+    ul.appendChild(li0);
+  }
+  list.forEach(function(p,rank){
+    var c=counts.get(p.id)||0;
+    var li=el('li','row');
+    li.appendChild(el('span','rk',String(rank+1)));
+    var sw=el('span','sw');sw.style.background=INKS[p.c%INKS.length];li.appendChild(sw);
+    var nm=el('span','nm',p.n);
+    if(p.id===myId)nm.appendChild(el('em',null,' (sen)'));
+    if(p.b)nm.appendChild(el('em',null,' bot'));
+    if(p.w>0)nm.appendChild(el('em',null,' · '+p.w+' galibiyet'));
+    li.appendChild(nm);
+    li.appendChild(el('span','ct',String(c)));
+    var fill=el('span','fill');fill.style.background=INKS[p.c%INKS.length];fill.style.width=(c/N*100)+'%';
+    li.appendChild(fill);
+    ul.appendChild(li);
+  });
+
+  /* bomb controls and hint */
+  var bb=$('bombBtn');
+  bb.textContent='Bomba: '+me.bombs;
+  bb.disabled=!(me.joined&&playing&&me.bombs>0);
+  bb.classList.toggle('armed',me.armed);
+  bb.setAttribute('aria-pressed',me.armed?'true':'false');
+  var prog=me.bombs>=cfg.bombMax?cfg.bombEvery:(me.taps%cfg.bombEvery);
+  pipEls.forEach(function(pe,j){pe.classList.toggle('on',j<prog);});
+  var hint;
+  if(!me.joined)hint='Katılmak için adını yaz.';
+  else if(!online)hint='Bağlantı koptu, yeniden bağlanılıyor…';
+  else if(!playing)hint='Tur bitti. Yeni tur birazdan başlıyor.';
+  else if(me.armed)hint='Bomba hazır. Bir hücreye dokun, 3×3 alan boyansın.';
+  else if(me.bombs>=cfg.bombMax)hint='Bomba deposu dolu. Birini kullan.';
+  else hint='Sürükleyerek boya. '+(cfg.bombEvery-(me.taps%cfg.bombEvery))+' boyama sonra yeni bomba.';
+  $('hint').textContent=hint;
+
+  /* result overlay */
+  if(playing||!me.joined){
+    overlay.hidden=true;lastOv='';
+  }else{
+    var t1,t2,t3;
+    if(!result||!result.ids.length){t1='Tur bitti';t2='';t3='Kimse boyamadı.';}
+    else{
+      var names=result.ids.map(function(id){var p=players.get(id);return p?p.n:'Oyuncu';});
+      if(result.ids.length>1){
+        t1='Berabere';
+        t2=names.slice(0,3).join(', ')+(names.length>3?' ve diğerleri':'');
+      }else{
+        t1=result.ids[0]===myId?'Kazandın':'Kazanan';
+        t2=names[0];
+      }
+      t3=result.score+' hücre';
+    }
+    var sig=t1+'|'+t2+'|'+t3;
+    if(sig!==lastOv){
+      lastOv=sig;
+      $('ovT').textContent=t1;$('ovN').textContent=t2;$('ovS').textContent=t3;
+    }
+    overlay.hidden=false;
+  }
+
+  /* room info */
+  $('roomInfo').hidden=!me.joined;
+  $('dot').classList.toggle('live',online);
+  var humans=0;players.forEach(function(p){if(!p.b)humans++;});
+  $('roomText').textContent=online?('Oda '+code+' · '+humans+' oyuncu'):'Yeniden bağlanıyor';
+}
+
+setInterval(render,250);
+render();
+})();
+</script>
+</body>
+</html>
