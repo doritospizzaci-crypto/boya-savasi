@@ -6,26 +6,15 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const { Lobby, cleanName } = require('./game');
 
-// Sadece bu sayfalar sunulur; sunucu kodu ve diğer dosyalar dışarıya açılmaz.
-const PAGES = { '/': 'index.html', '/index.html': 'index.html' };
 // Mobil operatörlerde onlarca kişi aynı IP adresini paylaşır, bu yüzden sınır geniş tutulur.
 const DEFAULT_MAX_CONN_PER_IP = 40;
+// Aynı anda en fazla bu kadar oyuncu alınır (RAM ve işlemci korunsun diye). MAX_PLAYERS ile değişir.
+const DEFAULT_MAX_PLAYERS = 400;
 // Saniyede 150'den fazla mesaj yok sayılır; 600'ü geçerse bağlantı kesilir.
-// Hızlı sürükleyen bir parmak bile bunun altında kalır, kesme sadece saldırı içindir.
 const SOFT_MSGS_PER_SEC = 150;
 const HARD_MSGS_PER_SEC = 600;
 const CODE_RE = /^[A-Z0-9]{3,8}$/;
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.txt': 'text/plain; charset=utf-8',
-  '.webmanifest': 'application/manifest+json',
-};
+const HOST_RE = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?$/i;
 
 const CSP = [
   "default-src 'self'",
@@ -57,7 +46,51 @@ function clientIp(req) {
   return req.socket.remoteAddress || 'unknown';
 }
 
-function makeStaticHandler(getStats) {
+// Sitenin dışarıdan görünen adresi (paylaşım görseli, sitemap vb. için). PUBLIC_URL ile sabitlenebilir.
+function originOf(req) {
+  const fixed = String(process.env.PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  if (/^https?:\/\/[a-z0-9.-]+(:\d{1,5})?$/i.test(fixed)) return fixed;
+  const first = (v) => String(v || '').split(',')[0].trim();
+  const host = first(req.headers['x-forwarded-host']) || first(req.headers.host);
+  if (!HOST_RE.test(host)) return '';
+  const xfp = first(req.headers['x-forwarded-proto']).toLowerCase();
+  const local = /^(localhost|127\.|\[?::1)/.test(host);
+  const proto = xfp === 'http' || xfp === 'https' ? xfp : (local ? 'http' : 'https');
+  return proto + '://' + host;
+}
+
+function makeHandler(lobby, lagInfo) {
+  const cache = new Map();
+  function readCached(name) {
+    if (cache.has(name)) return cache.get(name);
+    let buf = null;
+    try { buf = fs.readFileSync(path.join(__dirname, name)); } catch (e) { buf = null; }
+    cache.set(name, buf);
+    return buf;
+  }
+
+  const gsv = String(process.env.GOOGLE_SITE_VERIFICATION || '').replace(/[^A-Za-z0-9_-]/g, '');
+
+  function renderIndex(origin) {
+    const raw = readCached('index.html');
+    if (!raw) return null;
+    const hasOg = !!readCached('og.png');
+    const ogTags = hasOg
+      ? '<meta property="og:image" content="' + origin + '/og.png">' +
+        '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">' +
+        '<meta name="twitter:image" content="' + origin + '/og.png">'
+      : '';
+    return raw.toString('utf8')
+      .replace(/__ORIGIN__/g, origin)
+      .replace('<!--OGIMG-->', ogTags)
+      .replace('<!--GSV-->', gsv ? '<meta name="google-site-verification" content="' + gsv + '">' : '');
+  }
+
+  function send(res, req, status, headers, body) {
+    res.writeHead(status, securityHeaders(headers));
+    res.end(req.method === 'HEAD' ? undefined : body);
+  }
+
   return function handler(req, res) {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, securityHeaders({ Allow: 'GET, HEAD' }));
@@ -68,46 +101,87 @@ function makeStaticHandler(getStats) {
     try {
       pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     } catch (e) {
-      res.writeHead(400, securityHeaders());
-      res.end('Bad request');
+      send(res, req, 400, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Bad request');
       return;
     }
+
     if (pathname === '/healthz') {
-      res.writeHead(200, securityHeaders({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }));
-      res.end(JSON.stringify(Object.assign({ ok: true }, getStats())));
+      const mem = process.memoryUsage();
+      send(res, req, 200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        JSON.stringify(Object.assign({
+          ok: true,
+          uptimeSec: Math.round(process.uptime()),
+          rssMb: Math.round(mem.rss / 1048576),
+          lagMs: lagInfo.recent(),
+        }, lobby.stats())));
       return;
     }
-    const page = Object.prototype.hasOwnProperty.call(PAGES, pathname) ? PAGES[pathname] : null;
-    if (!page) {
-      res.writeHead(404, securityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
-      res.end('Bulunamadı');
+    if (pathname === '/top') {
+      send(res, req, 200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        JSON.stringify({ top: lobby.topList(Date.now(), 10) }));
       return;
     }
-    const file = path.join(__dirname, page);
-    fs.readFile(file, (err, buf) => {
-      if (err) {
-        res.writeHead(404, securityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
-        res.end('Bulunamadı');
+    if (pathname === '/robots.txt') {
+      const origin = originOf(req);
+      send(res, req, 200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+        'User-agent: *\nAllow: /\nDisallow: /top\nDisallow: /healthz\n' + (origin ? 'Sitemap: ' + origin + '/sitemap.xml\n' : ''));
+      return;
+    }
+    if (pathname === '/sitemap.xml') {
+      const origin = originOf(req);
+      send(res, req, 200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+        '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+        '<url><loc>' + origin + '/</loc></url></urlset>\n');
+      return;
+    }
+    if (pathname === '/og.png') {
+      const png = readCached('og.png');
+      if (!png) {
+        send(res, req, 404, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Bulunamadı');
         return;
       }
-      const ext = path.extname(file).toLowerCase();
-      res.writeHead(200, securityHeaders({
-        'Content-Type': MIME[ext] || 'application/octet-stream',
-        'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
-      }));
-      res.end(req.method === 'HEAD' ? undefined : buf);
-    });
+      send(res, req, 200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' }, png);
+      return;
+    }
+    if (pathname === '/' || pathname === '/index.html') {
+      const html = renderIndex(originOf(req));
+      if (html === null) {
+        send(res, req, 404, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Bulunamadı');
+        return;
+      }
+      send(res, req, 200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }, html);
+      return;
+    }
+    // Sunucu kodu ve diğer dosyalar dışarıya açılmaz.
+    send(res, req, 404, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Bulunamadı');
   };
+}
+
+// Olay döngüsü gecikmesi: sunucu yetişemiyorsa burada görünür (/healthz içinde lagMs).
+function startLagMonitor() {
+  const ring = new Array(20).fill(0);
+  let k = 0;
+  let last = Date.now();
+  const timer = setInterval(() => {
+    const n = Date.now();
+    ring[k++ % ring.length] = Math.max(0, n - last - 500);
+    last = n;
+  }, 500);
+  timer.unref();
+  return { recent: () => Math.max.apply(null, ring), stop: () => clearInterval(timer) };
 }
 
 function start(opts) {
   opts = opts || {};
   const port = opts.port !== undefined ? opts.port : (Number(process.env.PORT) || 3000);
   const host = opts.host || '0.0.0.0';
-  const lobby = new Lobby();
+  const maxPlayers = opts.maxPlayers || Number(process.env.MAX_PLAYERS) || DEFAULT_MAX_PLAYERS;
+  const maxPerIp = opts.maxPerIp || Number(process.env.MAX_PER_IP) || DEFAULT_MAX_CONN_PER_IP;
+  const lobby = new Lobby({ maxPlayers });
+  const lag = startLagMonitor();
   const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
-  const server = http.createServer(makeStaticHandler(() => lobby.stats()));
+  const server = http.createServer(makeHandler(lobby, lag));
   const wss = new WebSocketServer({
     server,
     path: '/ws',
@@ -116,12 +190,11 @@ function start(opts) {
   });
 
   const ipCount = new Map();
-  const maxPerIp = opts.maxPerIp || DEFAULT_MAX_CONN_PER_IP;
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req);
     const open = ipCount.get(ip) || 0;
-    if (open >= maxPerIp) {
+    if (open >= maxPerIp || wss.clients.size > maxPlayers * 2) {
       ws.close(1013, 'busy');
       return;
     }
@@ -168,11 +241,16 @@ function start(opts) {
       if (!m || typeof m !== 'object') return;
 
       if (m.t === 'join' && !player) {
-        let target;
+        if (lobby.isFull()) {
+          send(JSON.stringify({ t: 'err', m: 'busy' }));
+          return;
+        }
+        const gm = typeof m.gm === 'string' ? m.gm : 'classic';
         const code = typeof m.code === 'string' ? m.code.toUpperCase() : '';
-        if (m.mode === 'solo') target = lobby.solo();
-        else if (m.mode === 'code' && CODE_RE.test(code)) target = lobby.byCode(code);
-        else target = lobby.quick();
+        let target;
+        if (m.mode === 'solo') target = lobby.solo(gm);
+        else if (m.mode === 'code' && CODE_RE.test(code)) target = lobby.byCode(code, gm, m.bots === true);
+        else target = lobby.quick(gm);
         const p = target.addHuman({
           name: cleanName(m.n),
           color: Number.isInteger(m.c) ? m.c : -1,
@@ -187,15 +265,16 @@ function start(opts) {
       } else if (m.t === 'paint' && player) {
         room.paint(player.id, m.i, m.b === true, now);
       } else if (m.t === 'paints' && player && Array.isArray(m.c)) {
-        // Hızlı sürüklemede istemci boyamaları toplu gönderir.
         const n = Math.min(m.c.length, 40);
         for (let k = 0; k < n; k++) room.paint(player.id, m.c[k], false, now);
       }
     });
 
     ws.on('close', (code, reason) => {
-      // Render panelindeki Logs sekmesinde bağlantıların neden koptuğu görünür.
-      console.log('[kapanış] kod=' + code + ' neden=' + String(reason || '') + ' oyuncu=' + (player ? player.name : '-'));
+      // Sadece olağan dışı kapanışlar kaydedilir; Render'daki Logs sekmesinde nedeni görünür.
+      if (code === 1008 || code === 1009 || code === 1011 || code === 1013) {
+        console.log('[kapanış] kod=' + code + ' neden=' + String(reason || '') + ' oyuncu=' + (player ? player.name : '-'));
+      }
       clearTimeout(joinTimer);
       const left = (ipCount.get(ip) || 1) - 1;
       if (left <= 0) ipCount.delete(ip);
@@ -221,6 +300,7 @@ function start(opts) {
   function close() {
     clearInterval(gameTimer);
     clearInterval(pingTimer);
+    lag.stop();
     wss.clients.forEach((ws) => ws.terminate());
     return new Promise((resolve) => {
       wss.close(() => server.close(() => resolve()));
@@ -244,4 +324,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { start };
+module.exports = { start, originOf };

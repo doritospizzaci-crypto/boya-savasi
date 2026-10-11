@@ -6,17 +6,27 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#EDEEF3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#12131A" media="(prefers-color-scheme: dark)">
-<title>Boya Savaşı</title>
-<meta name="description" content="Gerçek oyuncularla 60 saniyelik turlarda ortak tahtayı boya, en çok hücreyi kap. Kayıt yok, indirme yok.">
-<meta property="og:title" content="Boya Savaşı">
-<meta property="og:description" content="Gerçek oyuncularla 60 saniyelik turlarda ortak tahtayı boya, en çok hücreyi kap.">
+<title>Boya Savaşı: arkadaşlarınla online boyama oyunu</title>
+<meta name="description" content="Boya Savaşı, tarayıcıda oynanan ücretsiz çok oyunculu boyama oyunu. Gerçek oyuncularla ortak tahtayı boya, bomba kazan, 60 saniyede en çok hücreyi kap. Kayıt yok, indirme yok.">
+<link rel="canonical" href="__ORIGIN__/">
+<meta property="og:site_name" content="Boya Savaşı">
+<meta property="og:title" content="Boya Savaşı: arkadaşlarınla online boyama oyunu">
+<meta property="og:description" content="Ortak tahtayı boya, bomba kazan, en çok hücreyi kap. Ücretsiz, kayıtsız, tarayıcıda.">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:url" content="__ORIGIN__/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Boya Savaşı">
+<meta name="twitter:description" content="Ortak tahtayı boya, bomba kazan, en çok hücreyi kap. Ücretsiz ve kayıtsız.">
+<!--OGIMG-->
+<!--GSV-->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Boya Savaşı","url":"__ORIGIN__/","applicationCategory":"GameApplication","operatingSystem":"Any","inLanguage":"tr","description":"Tarayıcıda oynanan ücretsiz çok oyunculu boyama oyunu.","offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"}}</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='9' height='9' rx='2' fill='%23F2452F'/%3E%3Crect x='11.5' y='1' width='9' height='9' rx='2' fill='%232D5BFF'/%3E%3Crect x='22' y='1' width='9' height='9' rx='2' fill='%23F5B800'/%3E%3Crect x='1' y='11.5' width='9' height='9' rx='2' fill='%2300A38F'/%3E%3Crect x='11.5' y='11.5' width='9' height='9' rx='2' fill='%23EF4F9B'/%3E%3Crect x='22' y='11.5' width='9' height='9' rx='2' fill='%2338B24E'/%3E%3Crect x='1' y='22' width='9' height='9' rx='2' fill='%238450F0'/%3E%3Crect x='11.5' y='22' width='9' height='9' rx='2' fill='%23FF8A1F'/%3E%3Crect x='22' y='22' width='9' height='9' rx='2' fill='%2300A7E1'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Mono:wght@500&family=DM+Sans:wght@400;500;700&display=swap">
 <style>
-/* Düzen: solda kare boya tahtası ve tur sayacı, sağda canlı skor tablosu; telefonda alt alta. */
+/* Düzen: solda kare boya tahtası, mürekkep göstergesi ve tur sayacı; sağda canlı skor tablosu. Telefonda alt alta. */
 :root{
   --bg:#EDEEF3;
   --surface:#FFFFFF;
@@ -29,6 +39,7 @@
   --overlay:rgba(237,238,243,.88);
   --live:#2FB457;
   --bad:#D13B2E;
+  --mine:#1B1D2A;
   --f-display:'Bricolage Grotesque','Arial Black',system-ui,sans-serif;
   --f-body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;
@@ -57,17 +68,17 @@ body{background:var(--bg);color:var(--ink);font:400 15px/1.45 var(--f-body);-web
 .logo{display:grid;grid-template-columns:repeat(3,11px);gap:2px;flex:none}
 .logo i{display:block;width:11px;height:11px;border-radius:3px}
 h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
-.room{display:flex;align-items:center;gap:10px;font:500 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.room{display:flex;align-items:center;gap:10px;font:500 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex-wrap:wrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.live{background:var(--live)}
-.room b{color:var(--ink);font-weight:500}
 .mini{font:700 12px var(--f-body);letter-spacing:0;text-transform:none;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
 .mini:hover{background:var(--cell)}
 .mini:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 .game{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}
 @media (max-width:760px){.game{grid-template-columns:minmax(0,1fr)}}
-.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0;max-width:560px;width:100%}
+.stage.big{max-width:640px}
 
 .clock{display:flex;align-items:center;gap:12px}
 .bar{flex:1;height:10px;background:var(--cell);border-radius:5px;overflow:hidden}
@@ -76,12 +87,14 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
 .clock b{font:500 24px/1 var(--f-mono);min-width:2.6ch;text-align:right;font-variant-numeric:tabular-nums}
 .clock small{font:500 11px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:9ch}
 
-.board-wrap{position:relative;width:100%;max-width:560px}
+.board-wrap{position:relative;width:100%}
 .board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;aspect-ratio:1;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair;border-radius:8px}
 .board:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .cell{background:var(--cell);border-radius:5px;transition:background-color .12s}
+.big .cell{border-radius:3px}
 .cell:hover{background-color:var(--cell-hi)}
 .cell.mine{box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+.big .cell.mine{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7)}
 .cell.kf{outline:2px solid var(--ink);outline-offset:1px}
 .cell.pop{animation:pop .18s ease-out}
 @keyframes pop{from{transform:scale(.8)}to{transform:scale(1)}}
@@ -91,34 +104,47 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
 .overlay .t{font:500 12px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .overlay .n{font:800 clamp(28px,8vw,44px)/1.05 var(--f-display);letter-spacing:-.02em;overflow-wrap:anywhere;text-wrap:balance}
 .overlay .s{font:500 15px var(--f-mono)}
+.overlay .r{font:700 13px var(--f-body);color:var(--live)}
 
-.actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;max-width:560px}
+.actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:end}
+.ink{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lb2{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.slots{display:flex;gap:5px}
+.slots i{flex:1;height:18px;border-radius:6px;background:var(--cell);transition:background-color .1s}
+.slots i.on{background:var(--mine)}
+.wait{height:4px;border-radius:2px;background:var(--cell);overflow:hidden;opacity:0;transition:opacity .1s}
+.ink.waiting .wait{opacity:1}
+.wait i{display:block;height:100%;width:100%;background:var(--mine);transform-origin:left center;transform:scaleX(0)}
+.bombbox{display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .btn{font:700 15px var(--f-body);background:var(--ink);color:var(--on-ink);border:0;border-radius:10px;padding:11px 18px;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .btn.armed{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--ink)}
 .pips{display:flex;gap:4px}
-.pips i{width:12px;height:6px;border-radius:3px;background:var(--cell)}
+.pips i{flex:1;height:6px;border-radius:3px;background:var(--cell)}
 .pips i.on{background:var(--ink)}
-.hint{margin:0;color:var(--muted);font-size:14px;flex:1;min-width:12ch}
+.hint{grid-column:1/-1;margin:0;color:var(--muted);font-size:14px;min-height:2.9em}
 
 .side{display:flex;flex-direction:column;gap:14px;min-width:0}
 .side h2{margin:0;font:700 13px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .scores{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .row{display:grid;grid-template-columns:20px 14px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;position:relative;overflow:hidden}
+.row.me{border-color:var(--ink)}
 .row .rk{font:500 12px var(--f-mono);color:var(--muted)}
 .row .sw{width:14px;height:14px;border-radius:4px}
 .row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 .row .nm em{font-style:normal;color:var(--muted);font-weight:400}
 .row .ct{font:500 15px var(--f-mono);font-variant-numeric:tabular-nums}
 .row .fill{position:absolute;left:0;bottom:0;height:3px;opacity:.9}
+.more{margin:0;color:var(--muted);font:500 12px var(--f-mono);text-align:center}
 .empty{color:var(--muted);font-size:14px;margin:0}
 .rules{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
 
-.join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--overlay);z-index:10;backdrop-filter:blur(6px);overflow-y:auto}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;margin:auto}
+.join{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:var(--overlay);z-index:10;backdrop-filter:blur(6px);overflow-y:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:14px;margin:auto}
 .card h2{margin:0;font:800 28px/1.1 var(--f-display);letter-spacing:-.02em}
+.card h3{margin:0;font:700 13px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .card p{margin:0;color:var(--muted);font-size:14px}
 .card p.err{color:var(--bad)}
 .card .lb{font:500 12px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
@@ -130,11 +156,24 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
 .sw2 span{display:block;aspect-ratio:1;border-radius:10px;border:3px solid transparent;cursor:pointer}
 .sw2 input:checked+span{border-color:var(--ink);box-shadow:inset 0 0 0 3px var(--surface)}
 .sw2 input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mode{position:relative;display:block}
+.mode input{position:absolute;opacity:0;pointer-events:none}
+.mode span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:2px solid var(--line);border-radius:12px;cursor:pointer;height:100%}
+.mode b{font:700 15px var(--f-body)}
+.mode small{color:var(--muted);font-size:12px;line-height:1.35}
+.mode input:checked+span{border-color:var(--ink)}
+.mode input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
 .sep{display:flex;align-items:center;gap:10px;font:500 12px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .codeRow{display:flex;gap:8px}
 .codeRow input{flex:1;text-transform:uppercase;letter-spacing:.12em}
 .codeRow input::placeholder{text-transform:none;letter-spacing:0}
+.mystats{font:500 13px var(--f-mono);color:var(--ink)}
+.topList{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.topList li{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.topList li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topList li span:last-child{font:500 13px var(--f-mono);color:var(--muted)}
 .noscript{padding:24px;text-align:center}
 </style>
 </head>
@@ -155,7 +194,7 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
   </header>
 
   <main class="game">
-    <section class="stage">
+    <section class="stage" id="stage">
       <div class="clock">
         <div class="bar" id="bar"><i id="barFill"></i></div>
         <b id="clockNum">60</b>
@@ -168,12 +207,20 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
           <div class="t" id="ovT"></div>
           <div class="n" id="ovN"></div>
           <div class="s" id="ovS"></div>
+          <div class="r" id="ovR"></div>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn" id="bombBtn" type="button" aria-pressed="false" disabled>Bomba: 0</button>
-        <div class="pips" id="pips" aria-hidden="true"></div>
+        <div class="ink" id="ink" role="img" aria-label="Mürekkep">
+          <span class="lb2">Mürekkep</span>
+          <div class="slots" id="inkSlots" aria-hidden="true"></div>
+          <div class="wait" aria-hidden="true"><i id="inkBar"></i></div>
+        </div>
+        <div class="bombbox">
+          <button class="btn" id="bombBtn" type="button" aria-pressed="false" disabled>Bomba: 0</button>
+          <div class="pips" id="pips" aria-hidden="true"></div>
+        </div>
         <p class="hint" id="hint">Katılmak için adını yaz.</p>
       </div>
     </section>
@@ -181,7 +228,7 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
     <aside class="side">
       <h2>Skor tablosu</h2>
       <ol class="scores" id="scores"></ol>
-      <p class="rules">Bir hücreye dokun ya da parmağını sürükle. Hücreyi en son boyayan sahibi olur. Her 6 boyamada bir bomba kazanırsın; bomba 3×3 alanı tek dokunuşta boyar. 60 saniye sonunda en çok hücreye sahip olan turu kazanır, 8 saniye sonra yeni tur başlar. Botlarla oyna modunda sadece sen ve iki bot olursun. Rastgele ve özel odalarda bot yoktur, yalnızca gerçek oyuncular vardır.</p>
+      <p class="rules">Bir hücreye dokun ya da parmağını sürükle. Hücreyi en son boyayan sahibi olur. Mürekkep tankın 3 hücre alır; tank boşalınca 1 saniye dolması beklenir. Her 6 boyamada bir bomba kazanırsın. Bomba tankın tamamını harcar ama 3×3 alanı tek dokunuşta boyar. Süre bitince en çok hücreye sahip olan turu kazanır. Botlarla oyna modunda sadece sen ve iki bot olursun, diğer modlarda yalnızca gerçek oyuncular vardır.</p>
     </aside>
   </main>
 </div>
@@ -189,9 +236,14 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
 <div class="join" id="join">
   <form class="card" id="joinForm" autocomplete="off">
     <h2>Savaşa katıl</h2>
-    <p>Gerçek oyuncularla 60 saniyelik boya turları. Kayıt yok.</p>
+    <p>Ücretsiz çok oyunculu boyama oyunu. Kayıt yok, indirme yok.</p>
     <label class="lb" for="nameInput">Adın</label>
     <input type="text" id="nameInput" maxlength="14" placeholder="Örn. Elif" enterkeyhint="go">
+    <span class="lb" id="modeLbl">Mod</span>
+    <div class="modes" id="modes" role="radiogroup" aria-labelledby="modeLbl">
+      <label class="mode"><input type="radio" name="gm" value="classic" checked><span><b>Klasik</b><small>12×12 tahta<br>12 kişiye kadar · 60 sn</small></span></label>
+      <label class="mode"><input type="radio" name="gm" value="arena"><span><b>Arena</b><small>20×20 tahta<br>24 kişiye kadar · 90 sn</small></span></label>
+    </div>
     <span class="lb" id="inkLbl">Mürekkebin</span>
     <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="inkLbl"></div>
     <button class="btn" type="submit" id="quickBtn">Rastgele oyuncularla oyna</button>
@@ -203,8 +255,17 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
       <input type="text" id="codeInput" maxlength="8" placeholder="Örn. K7M2" aria-describedby="codeNote">
       <button class="btn ghost" type="button" id="roomBtn">Odaya gir</button>
     </div>
-    <p id="codeNote">Kodu boş bırakırsan yeni bir özel oda kurulur. Odanın kodunu ya da davet linkini arkadaşlarına gönder.</p>
+    <p id="codeNote">Kodu boş bırakırsan yeni bir özel oda kurulur, bot girmez. Odanın kodunu ya da davet linkini arkadaşlarına gönder.</p>
     <p id="joinMsg" aria-live="polite"></p>
+    <div id="statsBox" hidden>
+      <h3>Senin istatistiklerin</h3>
+      <p class="mystats" id="myStats"></p>
+    </div>
+    <div id="topBox" hidden>
+      <h3>Bugünün şampiyonları</h3>
+      <ol class="topList" id="topList"></ol>
+    </div>
+    <button class="btn ghost" type="button" id="shareBtn">Siteyi arkadaşlarınla paylaş</button>
   </form>
 </div>
 
@@ -212,11 +273,16 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
 (function(){
 'use strict';
 
-var INKS=['#F2452F','#2D5BFF','#F5B800','#00A38F','#EF4F9B','#38B24E','#8450F0','#FF8A1F','#00A7E1','#A8CC00','#A0613A','#7E8AA6'];
+var INKS=[
+  '#F2452F','#2D5BFF','#F5B800','#00A38F','#EF4F9B','#38B24E','#8450F0','#FF8A1F','#00A7E1','#A8CC00','#A0613A','#7E8AA6',
+  '#9D0208','#14213D','#7CB518','#FF8FAB','#0B6E4F','#B8A1FF','#B8860B','#8ECAE6','#6A0572','#FFB4A2','#386641','#495867'
+];
 var INK_NAMES=['Kırmızı','Mavi','Sarı','Turkuaz','Pembe','Yeşil','Mor','Turuncu','Gök mavisi','Limon','Kahve','Çelik'];
-var cfg={cols:12,rows:12,play:60000,rest:8000,bombEvery:6,bombMax:3};
+var DEFAULT_CFG={id:'classic',name:'Klasik',cols:12,rows:12,play:60000,rest:8000,bombEvery:6,bombMax:3,inkTank:3,inkRefill:1000,inks:24,maxPlayers:12};
+var cfg=DEFAULT_CFG;
 var N=cfg.cols*cfg.rows;
 var CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+var SCORE_ROWS=8;
 
 function $(id){return document.getElementById(id);}
 function el(tag,cls,text){var d=document.createElement(tag);if(cls)d.className=cls;if(text!=null)d.textContent=text;return d;}
@@ -229,14 +295,14 @@ function cleanName(s){
   }
   return Array.from(out.trim()).slice(0,14).join('');
 }
-function cleanCode(s){
-  return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
-}
+function cleanCode(s){return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);}
 function randomCode(){
   var c='';
   for(var i=0;i<4;i++)c+=CODE_ALPHABET.charAt(Math.floor(Math.random()*CODE_ALPHABET.length));
   return c;
 }
+function clampInt(v,lo,hi,dflt){v=Number(v);return isFinite(v)?Math.max(lo,Math.min(hi,Math.floor(v))):dflt;}
+function nowMs(){return performance.now();}
 function blast(i){
   var r=Math.floor(i/cfg.cols),c=i%cfg.cols,out=[];
   for(var dr=-1;dr<=1;dr++)for(var dc=-1;dc<=1;dc++){
@@ -246,48 +312,129 @@ function blast(i){
   return out;
 }
 
-var board=$('board'),overlay=$('overlay'),joinEl=$('join');
-var me={name:'',color:0,joined:false,bombs:0,taps:0,armed:false};
+var board=$('board'),overlay=$('overlay'),joinEl=$('join'),stage=$('stage');
+var me={name:'',color:0,joined:false,solo:false,bombs:0,taps:0,armed:false,ink:3,lockEnd:0,painted:false};
 var ws=null,online=false,pending=false,retryMs=1000,retryTimer=0;
-var target={mode:'quick',code:''};
-var myId=-1,code='',players=new Map(),cells=new Array(N).fill(-1);
-var playing=false,phaseEnd=0,result=null;
-var rafPending=false,kf=0,lastOv='',cellKey=new Array(N).fill('');
+var target={mode:'quick',code:'',bots:false};
+var myId=-1,code='',players=new Map(),cells=[];
+var playing=false,phaseEnd=0,result=null,roomHasBots=false;
+var rafPending=false,kf=0,lastOv='',cellKey=[],cellEls=[],pipEls=[],slotEls=[];
 
-/* logo, board, pips, swatches */
+/* logo ve renk seçici */
 [0,1,2,3,4,5,6,7,8].forEach(function(i){var d=el('i');d.style.background=INKS[i];$('logo').appendChild(d);});
-var cellEls=[];
-for(var i=0;i<N;i++){var d=el('div','cell');board.appendChild(d);cellEls.push(d);}
-var pipEls=[];
-for(var p=0;p<cfg.bombEvery;p++){var pe=el('i');$('pips').appendChild(pe);pipEls.push(pe);}
 var swatchEls=[];
-INKS.forEach(function(c,idx){
+INK_NAMES.forEach(function(nm,idx){
   var lab=el('label','sw2');
   var inp=document.createElement('input');
   inp.type='radio';inp.name='ink';inp.value=String(idx);inp.id='ink'+idx;
-  inp.setAttribute('aria-label',INK_NAMES[idx]);
-  var sp=el('span');sp.style.background=c;
+  inp.setAttribute('aria-label',nm);
+  var sp=el('span');sp.style.background=INKS[idx];
   lab.appendChild(inp);lab.appendChild(sp);
   $('swatches').appendChild(lab);
   swatchEls.push(inp);
 });
 function selectInk(idx){swatchEls.forEach(function(s,j){s.checked=(j===idx);});}
 function selectedInk(){for(var j=0;j<swatchEls.length;j++)if(swatchEls[j].checked)return j;return 0;}
+function selectMode(id){
+  var radios=document.getElementsByName('gm');
+  for(var j=0;j<radios.length;j++)radios[j].checked=(radios[j].value===id);
+}
+function selectedMode(){
+  var radios=document.getElementsByName('gm');
+  for(var j=0;j<radios.length;j++)if(radios[j].checked)return radios[j].value;
+  return 'classic';
+}
 
-/* saved name and ink, room code from the link */
-var saved={};
-try{saved=JSON.parse(localStorage.getItem('boya-savasi')||'{}')||{};}catch(e){saved={};}
-$('nameInput').value=cleanName(saved.name||'');
-selectInk(Number.isInteger(saved.color)&&saved.color>=0&&saved.color<INKS.length?saved.color:Math.floor(Math.random()*INKS.length));
+/* kayıtlı tercihler ve istatistikler (sadece bu cihazda) */
+var prefs={name:'',color:-1,gm:'classic',stats:{games:0,wins:0,best:0}};
 try{
-  var fromLink=cleanCode(new URLSearchParams(location.search).get('oda'));
+  var raw=JSON.parse(localStorage.getItem('boya-savasi')||'{}')||{};
+  if(typeof raw.name==='string')prefs.name=cleanName(raw.name);
+  if(Number.isInteger(raw.color)&&raw.color>=0&&raw.color<INK_NAMES.length)prefs.color=raw.color;
+  if(raw.gm==='arena'||raw.gm==='classic')prefs.gm=raw.gm;
+  if(raw.stats&&typeof raw.stats==='object'){
+    prefs.stats.games=clampInt(raw.stats.games,0,1e7,0);
+    prefs.stats.wins=clampInt(raw.stats.wins,0,1e7,0);
+    prefs.stats.best=clampInt(raw.stats.best,0,1e5,0);
+  }
+}catch(e){}
+function savePrefs(){try{localStorage.setItem('boya-savasi',JSON.stringify(prefs));}catch(e){}}
+$('nameInput').value=prefs.name;
+selectInk(prefs.color>=0?prefs.color:Math.floor(Math.random()*INK_NAMES.length));
+selectMode(prefs.gm);
+try{
+  var qs=new URLSearchParams(location.search);
+  var fromLink=cleanCode(qs.get('oda'));
+  var modeLink=qs.get('mod');
+  if(modeLink==='arena'||modeLink==='classic')selectMode(modeLink);
   if(fromLink.length>=3){
     $('codeInput').value=fromLink;
     $('joinMsg').textContent=fromLink+' odasına davet edildin. Adını yazıp Odaya gir de.';
   }
 }catch(e){}
 
-/* connection */
+function renderStats(){
+  var s=prefs.stats;
+  $('statsBox').hidden=!(s.games>0);
+  $('myStats').textContent=s.games+' maç · '+s.wins+' galibiyet · en iyi '+s.best+' hücre';
+}
+renderStats();
+
+/* bugünün şampiyonları */
+function loadTop(){
+  try{
+    fetch('/top',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var list=$('topList');
+      while(list.firstChild)list.removeChild(list.firstChild);
+      var arr=d&&Array.isArray(d.top)?d.top.slice(0,5):[];
+      arr.forEach(function(t){
+        var li=el('li');
+        li.appendChild(el('span',null,cleanName(t.n)));
+        li.appendChild(el('span',null,clampInt(t.w,0,1e6,0)+' galibiyet'));
+        list.appendChild(li);
+      });
+      $('topBox').hidden=!arr.length;
+    }).catch(function(){});
+  }catch(e){}
+}
+loadTop();
+
+/* tahta, bomba çubukları ve mürekkep yuvaları cfg'ye göre kurulur */
+function buildBoard(){
+  N=cfg.cols*cfg.rows;
+  while(board.firstChild)board.removeChild(board.firstChild);
+  board.style.gridTemplateColumns='repeat('+cfg.cols+',minmax(0,1fr))';
+  board.style.gap=cfg.cols>14?'2px':'3px';
+  stage.classList.toggle('big',cfg.cols>14);
+  cellEls=[];cellKey=new Array(N).fill('');cells=new Array(N).fill(-1);
+  for(var i=0;i<N;i++){var d=el('div','cell');board.appendChild(d);cellEls.push(d);}
+  kf=0;
+  var pips=$('pips');while(pips.firstChild)pips.removeChild(pips.firstChild);
+  pipEls=[];
+  for(var p=0;p<cfg.bombEvery;p++){var pe=el('i');pips.appendChild(pe);pipEls.push(pe);}
+  var slots=$('inkSlots');while(slots.firstChild)slots.removeChild(slots.firstChild);
+  slotEls=[];
+  for(var s=0;s<cfg.inkTank;s++){var se=el('i');slots.appendChild(se);slotEls.push(se);}
+}
+buildBoard();
+
+/* mürekkep: tank boşalınca inkRefill kadar beklenir, sonra tamamen dolar */
+function refillLocal(){
+  if(me.lockEnd&&nowMs()>=me.lockEnd){me.ink=cfg.inkTank;me.lockEnd=0;}
+}
+function animateWait(ms){
+  var bar=$('inkBar');
+  bar.style.transition='none';bar.style.transform='scaleX(0)';
+  void bar.offsetWidth;
+  bar.style.transition='transform '+ms+'ms linear';bar.style.transform='scaleX(1)';
+}
+function startLock(ms){
+  me.ink=0;me.lockEnd=nowMs()+ms;
+  animateWait(ms);
+  setTimeout(schedule,ms+20);
+}
+
+/* bağlantı */
 function send(obj){
   if(ws&&ws.readyState===1){try{ws.send(JSON.stringify(obj));}catch(e){}}
 }
@@ -305,7 +452,7 @@ function connect(){
   ws=sock;
   sock.onopen=function(){
     if(ws!==sock)return;
-    send({t:'join',n:me.name,c:me.color,mode:target.mode,code:target.code});
+    send({t:'join',n:me.name,c:me.color,mode:target.mode,code:target.code,gm:prefs.gm,bots:target.bots});
   };
   sock.onmessage=function(ev){
     if(ws!==sock)return;
@@ -334,8 +481,9 @@ function startJoin(mode,roomCode){
   var n=cleanName($('nameInput').value);
   if(!n)n='Oyuncu '+(10+Math.floor(Math.random()*90));
   me.name=n;me.color=selectedInk();
-  try{localStorage.setItem('boya-savasi',JSON.stringify({name:n,color:me.color}));}catch(e){}
-  target={mode:mode,code:roomCode};
+  prefs.name=n;prefs.color=me.color;prefs.gm=selectedMode();savePrefs();
+  me.solo=(mode==='solo');
+  target={mode:mode,code:roomCode,bots:me.solo};
   pending=true;setJoinBusy(true);joinMessage('Bağlanıyor…',false);
   connect();
 }
@@ -349,21 +497,33 @@ $('roomBtn').addEventListener('click',function(){
   startJoin('code',c);
 });
 
-/* messages from the server */
+/* sunucudan gelen mesajlar */
 function handle(m){
   var i;
   if(m.t==='hi'){
+    var c=m.cfg||{};
+    cfg={
+      id:c.id==='arena'?'arena':'classic',name:String(c.name||'Klasik'),
+      cols:clampInt(c.cols,4,40,12),rows:clampInt(c.rows,4,40,12),
+      play:clampInt(c.play,1000,600000,60000),rest:clampInt(c.rest,1000,600000,8000),
+      bombEvery:clampInt(c.bombEvery,1,50,6),bombMax:clampInt(c.bombMax,1,10,3),
+      inkTank:clampInt(c.inkTank,1,10,3),inkRefill:clampInt(c.inkRefill,100,10000,1000),
+      inks:clampInt(c.inks,1,INKS.length,INKS.length),maxPlayers:clampInt(c.maxPlayers,1,100,12)
+    };
+    buildBoard();
     myId=m.id;code=m.code;
-    if(m.cfg&&m.cfg.cols===cfg.cols&&m.cfg.rows===cfg.rows)cfg=m.cfg;
     players=new Map();(m.players||[]).forEach(function(p){players.set(p.id,p);});
-    cells=Array.isArray(m.cells)&&m.cells.length===N?m.cells.slice():new Array(N).fill(-1);
-    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
-    me.bombs=m.b|0;me.taps=m.k|0;me.armed=false;
-    result=m.res||null;queue=[];
+    if(Array.isArray(m.cells)&&m.cells.length===N)cells=m.cells.slice();
+    playing=!!m.pl;phaseEnd=nowMs()+(m.left||0);
+    me.bombs=m.b|0;me.taps=m.k|0;me.armed=false;me.painted=false;
+    me.ink=clampInt(m.i,0,cfg.inkTank,cfg.inkTank);me.lockEnd=0;
+    if((m.l|0)>0){me.ink=0;me.lockEnd=nowMs()+(m.l|0)+60;animateWait(m.l|0);setTimeout(schedule,(m.l|0)+80);}
+    result=m.res||null;
     online=true;retryMs=1000;pending=false;me.joined=true;
-    if(target.mode==='code')target={mode:'code',code:code};
+    target={mode:'code',code:code,bots:me.solo};
+    prefs.gm=cfg.id;selectMode(cfg.id);
     joinEl.hidden=true;setJoinBusy(false);
-    try{history.replaceState(null,'','?oda='+code);}catch(e){}
+    try{history.replaceState(null,'','?oda='+code+'&mod='+cfg.id);}catch(e){}
     try{board.focus({preventScroll:true});}catch(e){}
   }else if(m.t==='pl'){
     players=new Map();(m.p||[]).forEach(function(p){players.set(p.id,p);});
@@ -375,58 +535,68 @@ function handle(m){
     }
   }else if(m.t==='n'){
     for(i=0;i<N;i++)cells[i]=-1;
-    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
-    result=null;me.armed=false;me.bombs=0;me.taps=0;
+    playing=!!m.pl;phaseEnd=nowMs()+(m.left||0);
+    result=null;me.armed=false;me.bombs=0;me.taps=0;me.painted=false;
+    me.ink=cfg.inkTank;me.lockEnd=0;
   }else if(m.t==='w'){
+    onRoundEnd(m);
     playing=false;result={ids:m.ids||[],score:m.score|0};
     (m.wins||[]).forEach(function(w){var p=players.get(w[0]);if(p)p.w=w[1];});
   }else if(m.t==='p'){
-    playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
+    playing=!!m.pl;phaseEnd=nowMs()+(m.left||0);
   }else if(m.t==='m'){
     me.bombs=m.b|0;me.taps=m.k|0;
+    var sInk=m.i|0;
+    if(sInk<me.ink)me.ink=sInk;
+    if((m.l|0)>0){
+      var end=nowMs()+(m.l|0)+60;
+      if(!me.lockEnd){me.ink=0;me.lockEnd=end;animateWait(m.l|0);setTimeout(schedule,(m.l|0)+80);}
+      else if(end>me.lockEnd){me.lockEnd=end;}
+    }
     if(me.bombs<1)me.armed=false;
   }else if(m.t==='err'){
     var s=ws;ws=null;
-    try{if(s)s.close();}catch(e){}
+    try{if(s)s.close();}catch(e2){}
     pending=false;me.joined=false;online=false;setJoinBusy(false);
-    joinMessage(m.m==='full'?'Bu oda dolu. Başka bir oda dene.':'Odaya girilemedi.',true);
+    joinMessage(m.m==='full'?'Bu oda dolu. Başka bir oda dene.':(m.m==='busy'?'Sunucu şu an çok dolu. Biraz sonra tekrar dene.':'Odaya girilemedi.'),true);
   }
   schedule();
 }
 
-/* painting */
-/* Hızlı sürüklemede boyamalar toplu gider: ilk dokunuş hemen, sonrakiler 40 ms'de bir tek mesajla. */
-var queue=[],queueTimer=0;
-function flushQueue(){
-  var q=queue.splice(0,40);
-  if(!q.length)return;
-  if(q.length===1)send({t:'paint',i:q[0],b:false});
-  else send({t:'paints',c:q});
+/* tur sonu: kişisel istatistik (botlu odalar sayılmaz) */
+var lastRecord=false;
+function onRoundEnd(m){
+  lastRecord=false;
+  roomHasBots=false;
+  players.forEach(function(p){if(p.b)roomHasBots=true;});
+  if(!me.painted||roomHasBots){me.painted=false;return;}
+  var mine=0;
+  for(var i=0;i<N;i++)if(cells[i]===myId)mine++;
+  var s=prefs.stats;
+  var won=(m.ids||[]).indexOf(myId)>=0;
+  s.games++;
+  if(won)s.wins++;
+  if(mine>s.best){lastRecord=s.games>1;s.best=mine;}
+  me.painted=false;
+  savePrefs();renderStats();
 }
-function onQueueTimer(){
-  queueTimer=0;
-  if(!queue.length)return;
-  flushQueue();
-  queueTimer=setTimeout(onQueueTimer,40);
-}
-function queuePaint(i){
-  if(!queueTimer){
-    send({t:'paint',i:i,b:false});
-    queueTimer=setTimeout(onQueueTimer,40);
-  }else queue.push(i);
-}
+
+/* boyama */
 function paint(idx,fromDrag){
   if(!me.joined||!online||!playing)return;
+  refillLocal();
+  if(me.lockEnd)return;
+  if(me.armed&&me.ink<cfg.inkTank)me.armed=false;
   var useBomb=!fromDrag&&me.armed&&me.bombs>0;
   if(useBomb){
     blast(idx).forEach(function(c){cells[c]=myId;});
-    me.bombs--;me.armed=false;
-    flushQueue();
-    send({t:'paint',i:idx,b:true});
+    me.bombs--;me.armed=false;me.ink=0;
   }else{
-    cells[idx]=myId;
-    queuePaint(idx);
+    cells[idx]=myId;me.ink--;
   }
+  me.painted=true;
+  if(me.ink<=0)startLock(cfg.inkRefill);
+  send({t:'paint',i:idx,b:useBomb});
   schedule();
 }
 function cellAt(x,y){
@@ -464,36 +634,43 @@ board.addEventListener('keydown',function(e){
   if(handled){e.preventDefault();schedule();}
 });
 function toggleBomb(){
+  refillLocal();
   if(!me.joined||!playing||me.bombs<1)return;
+  if(!me.armed&&(me.lockEnd||me.ink<cfg.inkTank))return;
   me.armed=!me.armed;
   schedule();
 }
 $('bombBtn').addEventListener('click',toggleBomb);
 
-/* invite */
-function flash(text){
-  var b=$('inviteBtn');b.textContent=text;
-  setTimeout(function(){b.textContent='Davet et';},1600);
+/* davet ve paylaşım */
+function flash(btn,text,back){
+  btn.textContent=text;
+  setTimeout(function(){btn.textContent=back;},1600);
 }
 function manualCopy(link){
-  try{window.prompt('Davet linki (kopyala):',link);}catch(e){}
+  try{window.prompt('Linki kopyala:',link);}catch(e){}
 }
-$('inviteBtn').addEventListener('click',function(){
-  if(!code)return;
-  var link=location.origin+location.pathname+'?oda='+code;
+function shareLink(link,text,btn,back){
   function copy(){
     try{
-      navigator.clipboard.writeText(link).then(function(){flash('Kopyalandı');},function(){manualCopy(link);});
+      navigator.clipboard.writeText(link).then(function(){flash(btn,'Kopyalandı',back);},function(){manualCopy(link);});
     }catch(e){manualCopy(link);}
   }
   if(navigator.share){
-    navigator.share({title:'Boya Savaşı',text:'Boya Savaşı odama katıl!',url:link}).catch(function(err){
+    navigator.share({title:'Boya Savaşı',text:text,url:link}).catch(function(err){
       if(!err||err.name!=='AbortError')copy();
     });
   }else copy();
+}
+$('inviteBtn').addEventListener('click',function(){
+  if(!code)return;
+  shareLink(location.origin+location.pathname+'?oda='+code+'&mod='+cfg.id,'Boya Savaşı odama katıl!',$('inviteBtn'),'Davet et');
+});
+$('shareBtn').addEventListener('click',function(){
+  shareLink(location.origin+'/','Boya Savaşı: ortak tahtayı boya, en çok hücreyi kap!',$('shareBtn'),'Siteyi arkadaşlarınla paylaş');
 });
 
-/* render */
+/* çizim */
 function schedule(){
   if(rafPending)return;
   rafPending=true;
@@ -502,12 +679,12 @@ function schedule(){
 function render(){
   rafPending=false;
   var i;
+  refillLocal();
+  if(!playing)me.armed=false;
 
-  /* scores from the board itself, so painting feels instant */
   var counts=new Map();
   for(i=0;i<N;i++){var o=cells[i];if(o>=0)counts.set(o,(counts.get(o)||0)+1);}
 
-  /* board */
   for(i=0;i<N;i++){
     var owner=cells[i],pl=owner>=0?players.get(owner):null;
     var key=pl?owner+':'+pl.c:'';
@@ -524,15 +701,15 @@ function render(){
     cellEls[i].classList.toggle('kf',document.activeElement===board&&i===kf);
   }
 
-  /* clock */
-  var left=Math.max(0,phaseEnd-performance.now());
+  /* saat */
+  var left=Math.max(0,phaseEnd-nowMs());
   var total=playing?cfg.play:cfg.rest;
   $('clockNum').textContent=String(Math.ceil(left/1000));
   $('clockLbl').textContent=playing?'sn kaldı':'sn sonra yeni tur';
   $('bar').classList.toggle('rest',!playing);
   $('barFill').style.transform='scaleX('+Math.max(0,Math.min(1,left/total))+')';
 
-  /* scoreboard */
+  /* skor tablosu: ilk 8 oyuncu, sen dışarıda kalırsan senin satırın da görünür */
   var list=Array.from(players.values());
   list.sort(function(a,b){
     return ((counts.get(b.id)||0)-(counts.get(a.id)||0))||(a.n<b.n?-1:(a.n>b.n?1:0));
@@ -543,9 +720,9 @@ function render(){
     var li0=el('li');li0.appendChild(el('p','empty','Henüz oyuncu yok. Katıl ve ilk boyayı sen at.'));
     ul.appendChild(li0);
   }
-  list.forEach(function(p,rank){
+  function addRow(p,rank){
     var c=counts.get(p.id)||0;
-    var li=el('li','row');
+    var li=el('li','row'+(p.id===myId?' me':''));
     li.appendChild(el('span','rk',String(rank+1)));
     var sw=el('span','sw');sw.style.background=INKS[p.c%INKS.length];li.appendChild(sw);
     var nm=el('span','nm',p.n);
@@ -557,12 +734,30 @@ function render(){
     var fill=el('span','fill');fill.style.background=INKS[p.c%INKS.length];fill.style.width=(c/N*100)+'%';
     li.appendChild(fill);
     ul.appendChild(li);
-  });
+  }
+  var shown=Math.min(list.length,SCORE_ROWS);
+  for(i=0;i<shown;i++)addRow(list[i],i);
+  if(list.length>shown){
+    var myRank=-1;
+    for(i=shown;i<list.length;i++)if(list[i].id===myId){myRank=i;break;}
+    if(myRank>=0)addRow(list[myRank],myRank);
+    var hidden=list.length-shown-(myRank>=0?1:0);
+    if(hidden>0){var lm=el('li');lm.appendChild(el('p','more','+ '+hidden+' oyuncu daha'));ul.appendChild(lm);}
+  }
 
-  /* bomb controls and hint */
+  /* mürekkep ve bomba */
+  var mineColor=INKS[(me.color>=0?me.color:0)%INKS.length];
+  var mp=players.get(myId);
+  if(mp)mineColor=INKS[mp.c%INKS.length];
+  $('ink').style.setProperty('--mine',mineColor);
+  $('ink').classList.toggle('waiting',!!me.lockEnd);
+  $('ink').setAttribute('aria-label','Mürekkep '+me.ink+' / '+cfg.inkTank);
+  slotEls.forEach(function(s,j){s.classList.toggle('on',j<me.ink);});
   var bb=$('bombBtn');
+  var canBomb=me.joined&&playing&&me.bombs>0&&!me.lockEnd&&me.ink>=cfg.inkTank;
   bb.textContent='Bomba: '+me.bombs;
-  bb.disabled=!(me.joined&&playing&&me.bombs>0);
+  bb.disabled=!(me.joined&&playing&&(me.bombs>0));
+  bb.style.opacity=(me.bombs>0&&!canBomb&&!me.armed)?'.6':'';
   bb.classList.toggle('armed',me.armed);
   bb.setAttribute('aria-pressed',me.armed?'true':'false');
   var prog=me.bombs>=cfg.bombMax?cfg.bombEvery:(me.taps%cfg.bombEvery);
@@ -572,11 +767,13 @@ function render(){
   else if(!online)hint='Bağlantı koptu, yeniden bağlanılıyor…';
   else if(!playing)hint='Tur bitti. Yeni tur birazdan başlıyor.';
   else if(me.armed)hint='Bomba hazır. Bir hücreye dokun, 3×3 alan boyansın.';
+  else if(me.lockEnd)hint='Mürekkep doluyor…';
+  else if(me.bombs>0&&me.ink<cfg.inkTank)hint='Bomba için önce mürekkep tankı dolu olmalı.';
   else if(me.bombs>=cfg.bombMax)hint='Bomba deposu dolu. Birini kullan.';
   else hint='Sürükleyerek boya. '+(cfg.bombEvery-(me.taps%cfg.bombEvery))+' boyama sonra yeni bomba.';
   $('hint').textContent=hint;
 
-  /* result overlay */
+  /* tur sonu ekranı */
   if(playing||!me.joined){
     overlay.hidden=true;lastOv='';
   }else{
@@ -593,21 +790,23 @@ function render(){
       }
       t3=result.score+' hücre';
     }
-    var sig=t1+'|'+t2+'|'+t3;
+    var sig=t1+'|'+t2+'|'+t3+'|'+lastRecord;
     if(sig!==lastOv){
       lastOv=sig;
       $('ovT').textContent=t1;$('ovN').textContent=t2;$('ovS').textContent=t3;
+      $('ovR').textContent=lastRecord?'Yeni kişisel rekor!':'';
     }
     overlay.hidden=false;
   }
 
-  /* room info */
+  /* oda bilgisi */
   $('roomInfo').hidden=!me.joined;
   $('dot').classList.toggle('live',online);
   var humans=0;players.forEach(function(p){if(!p.b)humans++;});
-  $('roomText').textContent=online?('Oda '+code+' · '+humans+' oyuncu'):'Yeniden bağlanıyor';
+  $('roomText').textContent=online?(cfg.name+' · Oda '+code+' · '+humans+' oyuncu'):'Yeniden bağlanıyor';
 }
 
+document.addEventListener('visibilitychange',function(){if(!document.hidden){schedule();loadTop();}});
 setInterval(render,250);
 render();
 })();

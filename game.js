@@ -1,43 +1,50 @@
 'use strict';
 
 // Oyunun tüm kuralları sunucuda çalışır. İstemci sadece "şu hücreye dokundum" der;
-// tur süresi, hız sınırı, bomba hakkı ve skor burada hesaplanır.
+// tur süresi, mürekkep, bomba hakkı ve skor burada hesaplanır.
 
-const CFG = Object.freeze({
-  cols: 12,
-  rows: 12,
-  play: 60000,
-  rest: 8000,
-  bombEvery: 6,
-  bombMax: 3,
-  inks: 12,
-  maxPlayers: 12,
+// Her modun kuralları burada. Sayıları değiştirmek yeterli, başka yerde ayar yok.
+//  inkTank   : arka arkaya kaç hücre boyanabilir
+//  inkRefill : tank boşalınca kaç ms beklenir (sonra tank tamamen dolar)
+const BASE = { bombEvery: 6, bombMax: 3, inkTank: 3, inkRefill: 1000, inks: 24 };
+const MODES = Object.freeze({
+  classic: Object.freeze(Object.assign(
+    { id: 'classic', name: 'Klasik', cols: 12, rows: 12, play: 60000, rest: 8000, maxPlayers: 12 }, BASE)),
+  arena: Object.freeze(Object.assign(
+    { id: 'arena', name: 'Arena', cols: 20, rows: 20, play: 90000, rest: 10000, maxPlayers: 24 }, BASE)),
 });
-const N = CFG.cols * CFG.rows;
-const CYCLE = CFG.play + CFG.rest;
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const BOT_NAMES = ['Kaya', 'Deniz'];
+const CFG = MODES.classic;
 
-// Saniyede 50 boyama, en fazla 60'lık ani yığılma. Hızlı sürükleyen bir parmağa yeter.
-const BUCKET_MAX = 60;
-const BUCKET_PER_MS = 0.05;
-
-function roundInfo(now) {
-  const id = Math.floor(now / CYCLE);
-  const t = now - id * CYCLE;
-  const playing = t < CFG.play;
-  return { id, t, playing, left: playing ? CFG.play - t : CYCLE - t };
+function modeOf(id) {
+  return Object.prototype.hasOwnProperty.call(MODES, id) ? MODES[id] : MODES.classic;
 }
 
-function blastCells(i) {
-  const r = Math.floor(i / CFG.cols);
-  const c = i % CFG.cols;
+// Ağ gecikmesi dalgalansa da dürüst oyuncu reddedilmesin diye sunucu beklemeyi biraz kısa tutar.
+const LOCK_SLACK_MS = 150;
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const BOT_NAMES = ['Kaya', 'Deniz'];
+const DAY_MS = 86400000;
+const TOP_MAX_NAMES = 1000;
+
+function roundInfo(now, cfg) {
+  cfg = cfg || CFG;
+  const cycle = cfg.play + cfg.rest;
+  const id = Math.floor(now / cycle);
+  const t = now - id * cycle;
+  const playing = t < cfg.play;
+  return { id, t, playing, left: playing ? cfg.play - t : cycle - t };
+}
+
+function blastCells(cfg, i) {
+  const r = Math.floor(i / cfg.cols);
+  const c = i % cfg.cols;
   const out = [];
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       const rr = r + dr;
       const cc = c + dc;
-      if (rr >= 0 && rr < CFG.rows && cc >= 0 && cc < CFG.cols) out.push(rr * CFG.cols + cc);
+      if (rr >= 0 && rr < cfg.rows && cc >= 0 && cc < cfg.cols) out.push(rr * cfg.cols + cc);
     }
   }
   return out;
@@ -60,19 +67,27 @@ function cleanName(s) {
   return Array.from(out.trim()).slice(0, 14).join('');
 }
 
+// Türkiye saatine göre gün numarası (gün gece yarısı değişir).
+function dayKey(now) {
+  return Math.floor((now + 3 * 3600000) / DAY_MS);
+}
+
 class Room {
-  constructor(code, isPublic, bots) {
+  constructor(code, isPublic, bots, mode) {
     this.code = code;
     this.isPublic = !!isPublic;
     this.bots = !!bots;
+    this.cfg = modeOf(mode);
+    this.N = this.cfg.cols * this.cfg.rows;
     this.players = new Map();
     this.nextId = 1;
-    this.cells = new Int16Array(N).fill(-1);
+    this.cells = new Int16Array(this.N).fill(-1);
     this.round = -1;
     this.playing = false;
     this.pending = new Map();
     this.lastPhase = 0;
     this.lastResult = null;
+    this.onWin = null;
   }
 
   humans() {
@@ -99,7 +114,7 @@ class Room {
 
   scores() {
     const s = new Map();
-    for (let i = 0; i < N; i++) {
+    for (let i = 0; i < this.N; i++) {
       const o = this.cells[i];
       if (o >= 0) s.set(o, (s.get(o) || 0) + 1);
     }
@@ -108,9 +123,9 @@ class Room {
 
   // Tur geçişlerini zamana göre uygular. Her işlemden önce çağrılır.
   sync(now) {
-    const info = roundInfo(now);
+    const info = roundInfo(now, this.cfg);
     if (info.id !== this.round) this._newRound(info);
-    else if (this.playing && !info.playing) this._endRound(info);
+    else if (this.playing && !info.playing) this._endRound(info, now);
   }
 
   _newRound(info) {
@@ -122,12 +137,14 @@ class Room {
     for (const p of this.players.values()) {
       p.taps = 0;
       p.bombs = 0;
+      p.ink = this.cfg.inkTank;
+      p.lockUntil = 0;
       p.meDirty = true;
     }
     this.broadcast({ t: 'n', r: info.id, pl: info.playing, left: info.left });
   }
 
-  _endRound(info) {
+  _endRound(info, now) {
     this.playing = false;
     const sc = this.scores();
     let top = 0;
@@ -141,6 +158,13 @@ class Room {
         }
       }
     }
+    // Günlük şampiyonlar listesi sadece herkese açık, botsuz ve en az 2 gerçek oyunculu odalardan beslenir.
+    if (this.onWin && this.isPublic && !this.bots && this.humans() >= 2) {
+      for (const id of ids) {
+        const p = this.players.get(id);
+        if (p && !p.bot) this.onWin(p.name, now);
+      }
+    }
     this.lastResult = {
       t: 'w',
       ids,
@@ -152,7 +176,7 @@ class Room {
   }
 
   _clearCellsOf(id) {
-    for (let i = 0; i < N; i++) {
+    for (let i = 0; i < this.N; i++) {
       if (this.cells[i] === id) {
         this.cells[i] = -1;
         this.pending.set(i, -1);
@@ -164,9 +188,9 @@ class Room {
     const used = new Set();
     for (const p of this.players.values()) used.add(p.color);
     let chosen = -1;
-    if (Number.isInteger(color) && color >= 0 && color < CFG.inks && !used.has(color)) chosen = color;
+    if (Number.isInteger(color) && color >= 0 && color < this.cfg.inks && !used.has(color)) chosen = color;
     if (chosen < 0) {
-      for (let c = 0; c < CFG.inks; c++) {
+      for (let c = 0; c < this.cfg.inks; c++) {
         if (!used.has(c)) { chosen = c; break; }
       }
     }
@@ -180,8 +204,8 @@ class Room {
       taps: 0,
       bombs: 0,
       wins: 0,
-      tokens: BUCKET_MAX,
-      tokAt: now,
+      ink: this.cfg.inkTank,
+      lockUntil: 0,
       meDirty: false,
       nextAct: now + 500,
     };
@@ -214,7 +238,7 @@ class Room {
 
   addHuman({ name, color, send }, now) {
     this.sync(now);
-    if (this.humans() >= CFG.maxPlayers) return null;
+    if (this.humans() >= this.cfg.maxPlayers) return null;
     this._removeBots();
     const p = this._add({ name, color, bot: false, send }, now);
     this._ensureBots(now);
@@ -233,12 +257,13 @@ class Room {
   }
 
   hello(p, now) {
-    const info = roundInfo(now);
+    const info = roundInfo(now, this.cfg);
+    this._refill(p, now);
     return {
       t: 'hi',
       id: p.id,
       code: this.code,
-      cfg: CFG,
+      cfg: this.cfg,
       r: this.round,
       pl: this.playing,
       left: info.left,
@@ -246,43 +271,64 @@ class Room {
       players: this.playerList(),
       b: p.bombs,
       k: p.taps,
+      i: p.ink,
+      l: p.lockUntil ? Math.max(0, p.lockUntil - now) : 0,
       res: this.playing ? null : this.lastResult,
     };
   }
 
+  // Bekleme süresi dolduysa tank tamamen dolar.
+  _refill(p, now) {
+    if (p.lockUntil && now >= p.lockUntil) {
+      p.ink = this.cfg.inkTank;
+      p.lockUntil = 0;
+    }
+  }
+
   // Reddedilen boyama istemcide görünmüş olabilir; gerçek durumu geri bildirip düzeltir.
   _resync(p, i, bomb) {
-    const list = bomb ? blastCells(i) : [i];
+    if (p.bot) return;
+    const list = bomb ? blastCells(this.cfg, i) : [i];
     for (const c of list) this.pending.set(c, this.cells[c]);
     p.meDirty = true;
   }
 
+  // Bir boyama isteği. Mürekkep kuralı:
+  //  - Her hücre 1 mürekkep harcar; tank boşalınca inkRefill kadar beklenir, sonra tank dolar.
+  //  - Bomba tankın tamamını harcar (tank dolu olmalı) ve 3x3 alanı boyar.
   paint(pid, i, bomb, now) {
     this.sync(now);
     const p = this.players.get(pid);
     if (!p) return false;
-    if (!Number.isInteger(i) || i < 0 || i >= N) return false;
+    if (!Number.isInteger(i) || i < 0 || i >= this.N) return false;
     if (!this.playing) {
       this._resync(p, i, bomb);
       return false;
     }
-
-    p.tokens = Math.min(BUCKET_MAX, p.tokens + (now - p.tokAt) * BUCKET_PER_MS);
-    p.tokAt = now;
-    if (p.tokens < 1) {
+    this._refill(p, now);
+    if (p.lockUntil) {
       this._resync(p, i, bomb);
       return false;
     }
-    p.tokens -= 1;
 
     let list;
     if (bomb && p.bombs > 0) {
-      list = blastCells(i);
+      if (p.ink < this.cfg.inkTank) {
+        this._resync(p, i, bomb);
+        return false;
+      }
+      list = blastCells(this.cfg, i);
       p.bombs--;
+      p.ink = 0;
     } else {
       list = [i];
       p.taps++;
-      if (p.taps % CFG.bombEvery === 0 && p.bombs < CFG.bombMax) p.bombs++;
+      if (p.taps % this.cfg.bombEvery === 0 && p.bombs < this.cfg.bombMax) p.bombs++;
+      p.ink--;
+    }
+    if (p.ink <= 0) {
+      p.ink = 0;
+      p.lockUntil = now + Math.max(0, this.cfg.inkRefill - LOCK_SLACK_MS);
     }
     for (const c of list) {
       if (this.cells[c] !== pid) {
@@ -295,25 +341,27 @@ class Room {
   }
 
   _botAct(now) {
+    const { cols, rows } = this.cfg;
     for (const p of this.players.values()) {
       if (!p.bot || now < p.nextAct) continue;
-      p.nextAct = now + 250 + Math.random() * 250;
+      // Botlar da mürekkep kuralına uyar: üç boyama, sonra bekleme.
+      p.nextAct = now + 120 + Math.random() * 180;
       let target = -1;
       if (Math.random() < 0.65) {
         const owned = [];
-        for (let i = 0; i < N; i++) if (this.cells[i] === p.id) owned.push(i);
+        for (let i = 0; i < this.N; i++) if (this.cells[i] === p.id) owned.push(i);
         if (owned.length) {
           const base = owned[Math.floor(Math.random() * owned.length)];
-          const r = Math.floor(base / CFG.cols);
-          const c = base % CFG.cols;
+          const r = Math.floor(base / cols);
+          const c = base % cols;
           const d = [[-1, 0], [1, 0], [0, -1], [0, 1]][Math.floor(Math.random() * 4)];
           const rr = r + d[0];
           const cc = c + d[1];
-          if (rr >= 0 && rr < CFG.rows && cc >= 0 && cc < CFG.cols) target = rr * CFG.cols + cc;
+          if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) target = rr * cols + cc;
         }
       }
-      if (target < 0) target = Math.floor(Math.random() * N);
-      this.paint(p.id, target, p.bombs > 0 && Math.random() < 0.25, now);
+      if (target < 0) target = Math.floor(Math.random() * this.N);
+      this.paint(p.id, target, p.bombs > 0 && p.ink === this.cfg.inkTank && Math.random() < 0.5, now);
     }
   }
 
@@ -327,22 +375,41 @@ class Room {
       this.broadcast({ t: 'c', c });
     }
     for (const p of this.players.values()) {
+      this._refill(p, now);
       if (p.meDirty) {
         p.meDirty = false;
-        if (p.send) p.send(JSON.stringify({ t: 'm', b: p.bombs, k: p.taps }));
+        if (p.send) {
+          p.send(JSON.stringify({
+            t: 'm', b: p.bombs, k: p.taps, i: p.ink, l: p.lockUntil ? Math.max(0, p.lockUntil - now) : 0,
+          }));
+        }
       }
     }
     if (now - this.lastPhase >= 1000) {
       this.lastPhase = now;
-      const info = roundInfo(now);
+      const info = roundInfo(now, this.cfg);
       this.broadcast({ t: 'p', r: this.round, pl: this.playing, left: info.left });
     }
   }
 }
 
 class Lobby {
-  constructor() {
+  constructor(opts) {
+    opts = opts || {};
     this.rooms = new Map();
+    this.maxTotal = opts.maxPlayers || 400;
+    this.top = new Map();
+    this.topDay = -1;
+  }
+
+  humans() {
+    let n = 0;
+    for (const r of this.rooms.values()) n += r.humans();
+    return n;
+  }
+
+  isFull() {
+    return this.humans() >= this.maxTotal;
   }
 
   _freshCode() {
@@ -353,36 +420,52 @@ class Lobby {
     }
   }
 
-  // Hızlı oyun: en kalabalık, dolmamış herkese açık odaya gir; yoksa yenisini aç.
-  quick() {
+  _make(code, isPublic, bots, mode) {
+    const r = new Room(code, isPublic, bots, mode);
+    r.onWin = (name, now) => this.recordWin(name, now);
+    this.rooms.set(code, r);
+    return r;
+  }
+
+  // Rastgele oyuncularla: seçilen moddaki en kalabalık, dolmamış herkese açık odaya gir; yoksa yenisini aç.
+  quick(mode) {
+    const cfg = modeOf(mode);
     let best = null;
     for (const r of this.rooms.values()) {
-      if (!r.isPublic) continue;
+      if (!r.isPublic || r.cfg !== cfg) continue;
       const h = r.humans();
-      if (h > 0 && h < CFG.maxPlayers && (!best || h > best.humans())) best = r;
+      if (h > 0 && h < cfg.maxPlayers && (!best || h > best.humans())) best = r;
     }
-    if (!best) {
-      best = new Room(this._freshCode(), true, false);
-      this.rooms.set(best.code, best);
-    }
-    return best;
+    return best || this._make(this._freshCode(), true, false, cfg.id);
   }
 
   // Botlarla oyna: her oyuncuya ayrı, listelenmeyen, botlu bir oda açılır.
-  solo() {
-    const r = new Room(this._freshCode(), false, true);
-    this.rooms.set(r.code, r);
-    return r;
+  solo(mode) {
+    return this._make(this._freshCode(), false, true, mode);
   }
 
-  // Özel oda: kod ile girilir, yoksa oluşturulur, hızlı oyunda listelenmez, bot yoktur.
-  byCode(code) {
-    let r = this.rooms.get(code);
-    if (!r) {
-      r = new Room(code, false, false);
-      this.rooms.set(code, r);
+  // Özel oda: kod ile girilir, yoksa oluşturulur, hızlı oyunda listelenmez.
+  // Var olan odaya girerken odanın kendi modu geçerlidir.
+  byCode(code, mode, bots) {
+    return this.rooms.get(code) || this._make(code, false, !!bots, mode);
+  }
+
+  recordWin(name, now) {
+    const day = dayKey(now);
+    if (day !== this.topDay) {
+      this.top.clear();
+      this.topDay = day;
     }
-    return r;
+    if (!this.top.has(name) && this.top.size >= TOP_MAX_NAMES) return;
+    this.top.set(name, (this.top.get(name) || 0) + 1);
+  }
+
+  // Bugünün en çok tur kazananları. Bellekte tutulur; sunucu yeniden başlayınca sıfırlanır.
+  topList(now, limit) {
+    if (dayKey(now) !== this.topDay) return [];
+    return Array.from(this.top, ([n, w]) => ({ n, w }))
+      .sort((a, b) => (b.w - a.w) || (a.n < b.n ? -1 : (a.n > b.n ? 1 : 0)))
+      .slice(0, limit || 10);
   }
 
   tick(now) {
@@ -396,10 +479,17 @@ class Lobby {
   }
 
   stats() {
+    const byMode = {};
+    for (const id of Object.keys(MODES)) byMode[id] = { rooms: 0, players: 0 };
     let players = 0;
-    for (const r of this.rooms.values()) players += r.humans();
-    return { rooms: this.rooms.size, players };
+    for (const r of this.rooms.values()) {
+      const h = r.humans();
+      players += h;
+      byMode[r.cfg.id].rooms++;
+      byMode[r.cfg.id].players += h;
+    }
+    return { rooms: this.rooms.size, players, maxPlayers: this.maxTotal, byMode };
   }
 }
 
-module.exports = { CFG, N, CYCLE, roundInfo, blastCells, cleanName, Room, Lobby };
+module.exports = { CFG, MODES, modeOf, roundInfo, blastCells, cleanName, dayKey, Room, Lobby };
