@@ -18,9 +18,9 @@ const CYCLE = CFG.play + CFG.rest;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const BOT_NAMES = ['Kaya', 'Deniz'];
 
-// Saniyede 20 boyama, en fazla 30'luk ani yığılma.
-const BUCKET_MAX = 30;
-const BUCKET_PER_MS = 0.02;
+// Saniyede 50 boyama, en fazla 60'lık ani yığılma. Hızlı sürükleyen bir parmağa yeter.
+const BUCKET_MAX = 60;
+const BUCKET_PER_MS = 0.05;
 
 function roundInfo(now) {
   const id = Math.floor(now / CYCLE);
@@ -250,15 +250,29 @@ class Room {
     };
   }
 
+  // Reddedilen boyama istemcide görünmüş olabilir; gerçek durumu geri bildirip düzeltir.
+  _resync(p, i, bomb) {
+    const list = bomb ? blastCells(i) : [i];
+    for (const c of list) this.pending.set(c, this.cells[c]);
+    p.meDirty = true;
+  }
+
   paint(pid, i, bomb, now) {
     this.sync(now);
     const p = this.players.get(pid);
-    if (!p || !this.playing) return false;
+    if (!p) return false;
     if (!Number.isInteger(i) || i < 0 || i >= N) return false;
+    if (!this.playing) {
+      this._resync(p, i, bomb);
+      return false;
+    }
 
     p.tokens = Math.min(BUCKET_MAX, p.tokens + (now - p.tokAt) * BUCKET_PER_MS);
     p.tokAt = now;
-    if (p.tokens < 1) return false;
+    if (p.tokens < 1) {
+      this._resync(p, i, bomb);
+      return false;
+    }
     p.tokens -= 1;
 
     let list;

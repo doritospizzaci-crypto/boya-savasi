@@ -8,8 +8,12 @@ const { Lobby, cleanName } = require('./game');
 
 // Sadece bu sayfalar sunulur; sunucu kodu ve diğer dosyalar dışarıya açılmaz.
 const PAGES = { '/': 'index.html', '/index.html': 'index.html' };
-const MAX_CONN_PER_IP = 8;
-const MAX_MSGS_PER_SEC = 60;
+// Mobil operatörlerde onlarca kişi aynı IP adresini paylaşır, bu yüzden sınır geniş tutulur.
+const DEFAULT_MAX_CONN_PER_IP = 40;
+// Saniyede 150'den fazla mesaj yok sayılır; 600'ü geçerse bağlantı kesilir.
+// Hızlı sürükleyen bir parmak bile bunun altında kalır, kesme sadece saldırı içindir.
+const SOFT_MSGS_PER_SEC = 150;
+const HARD_MSGS_PER_SEC = 600;
 const CODE_RE = /^[A-Z0-9]{3,8}$/;
 
 const MIME = {
@@ -112,11 +116,12 @@ function start(opts) {
   });
 
   const ipCount = new Map();
+  const maxPerIp = opts.maxPerIp || DEFAULT_MAX_CONN_PER_IP;
 
   wss.on('connection', (ws, req) => {
     const ip = clientIp(req);
     const open = ipCount.get(ip) || 0;
-    if (open >= MAX_CONN_PER_IP) {
+    if (open >= maxPerIp) {
       ws.close(1013, 'busy');
       return;
     }
@@ -148,10 +153,12 @@ function start(opts) {
         windowStart = now;
         msgs = 0;
       }
-      if (++msgs > MAX_MSGS_PER_SEC) {
+      msgs++;
+      if (msgs > HARD_MSGS_PER_SEC) {
         ws.close(1008, 'too fast');
         return;
       }
+      if (msgs > SOFT_MSGS_PER_SEC) return;
       let m;
       try {
         m = JSON.parse(data.toString());
@@ -179,10 +186,16 @@ function start(opts) {
         player = p;
       } else if (m.t === 'paint' && player) {
         room.paint(player.id, m.i, m.b === true, now);
+      } else if (m.t === 'paints' && player && Array.isArray(m.c)) {
+        // Hızlı sürüklemede istemci boyamaları toplu gönderir.
+        const n = Math.min(m.c.length, 40);
+        for (let k = 0; k < n; k++) room.paint(player.id, m.c[k], false, now);
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      // Render panelindeki Logs sekmesinde bağlantıların neden koptuğu görünür.
+      console.log('[kapanış] kod=' + code + ' neden=' + String(reason || '') + ' oyuncu=' + (player ? player.name : '-'));
       clearTimeout(joinTimer);
       const left = (ipCount.get(ip) || 1) - 1;
       if (left <= 0) ipCount.delete(ip);

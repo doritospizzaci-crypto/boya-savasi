@@ -359,7 +359,7 @@ function handle(m){
     cells=Array.isArray(m.cells)&&m.cells.length===N?m.cells.slice():new Array(N).fill(-1);
     playing=!!m.pl;phaseEnd=performance.now()+(m.left||0);
     me.bombs=m.b|0;me.taps=m.k|0;me.armed=false;
-    result=m.res||null;
+    result=m.res||null;queue=[];
     online=true;retryMs=1000;pending=false;me.joined=true;
     if(target.mode==='code')target={mode:'code',code:code};
     joinEl.hidden=true;setJoinBusy(false);
@@ -395,16 +395,38 @@ function handle(m){
 }
 
 /* painting */
+/* Hızlı sürüklemede boyamalar toplu gider: ilk dokunuş hemen, sonrakiler 40 ms'de bir tek mesajla. */
+var queue=[],queueTimer=0;
+function flushQueue(){
+  var q=queue.splice(0,40);
+  if(!q.length)return;
+  if(q.length===1)send({t:'paint',i:q[0],b:false});
+  else send({t:'paints',c:q});
+}
+function onQueueTimer(){
+  queueTimer=0;
+  if(!queue.length)return;
+  flushQueue();
+  queueTimer=setTimeout(onQueueTimer,40);
+}
+function queuePaint(i){
+  if(!queueTimer){
+    send({t:'paint',i:i,b:false});
+    queueTimer=setTimeout(onQueueTimer,40);
+  }else queue.push(i);
+}
 function paint(idx,fromDrag){
   if(!me.joined||!online||!playing)return;
   var useBomb=!fromDrag&&me.armed&&me.bombs>0;
   if(useBomb){
     blast(idx).forEach(function(c){cells[c]=myId;});
     me.bombs--;me.armed=false;
+    flushQueue();
+    send({t:'paint',i:idx,b:true});
   }else{
     cells[idx]=myId;
+    queuePaint(idx);
   }
-  send({t:'paint',i:idx,b:useBomb});
   schedule();
 }
 function cellAt(x,y){
