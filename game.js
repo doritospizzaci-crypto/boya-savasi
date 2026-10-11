@@ -61,9 +61,10 @@ function cleanName(s) {
 }
 
 class Room {
-  constructor(code, isPublic) {
+  constructor(code, isPublic, bots) {
     this.code = code;
     this.isPublic = !!isPublic;
+    this.bots = !!bots;
     this.players = new Map();
     this.nextId = 1;
     this.cells = new Int16Array(N).fill(-1);
@@ -200,8 +201,9 @@ class Room {
     return removed;
   }
 
-  // Odada tek insan varsa boş kalmasın diye iki bot eklenir; ikinci insan gelince çıkarılır.
+  // Sadece botlu odalarda: tek insan varsa iki bot eklenir; ikinci insan gelince çıkarılır.
   _ensureBots(now) {
+    if (!this.bots) return;
     const h = this.humans();
     if (h === 1 && !this.hasBots()) {
       BOT_NAMES.forEach((n) => this._add({ name: n, bot: true }, now));
@@ -346,17 +348,24 @@ class Lobby {
       if (h > 0 && h < CFG.maxPlayers && (!best || h > best.humans())) best = r;
     }
     if (!best) {
-      best = new Room(this._freshCode(), true);
+      best = new Room(this._freshCode(), true, false);
       this.rooms.set(best.code, best);
     }
     return best;
   }
 
-  // Özel oda: kod ile girilir, yoksa oluşturulur, hızlı oyunda listelenmez.
+  // Botlarla oyna: her oyuncuya ayrı, listelenmeyen, botlu bir oda açılır.
+  solo() {
+    const r = new Room(this._freshCode(), false, true);
+    this.rooms.set(r.code, r);
+    return r;
+  }
+
+  // Özel oda: kod ile girilir, yoksa oluşturulur, hızlı oyunda listelenmez, bot yoktur.
   byCode(code) {
     let r = this.rooms.get(code);
     if (!r) {
-      r = new Room(code, false);
+      r = new Room(code, false, false);
       this.rooms.set(code, r);
     }
     return r;

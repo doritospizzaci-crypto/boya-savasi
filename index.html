@@ -181,7 +181,7 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
     <aside class="side">
       <h2>Skor tablosu</h2>
       <ol class="scores" id="scores"></ol>
-      <p class="rules">Bir hücreye dokun ya da parmağını sürükle. Hücreyi en son boyayan sahibi olur. Her 6 boyamada bir bomba kazanırsın; bomba 3×3 alanı tek dokunuşta boyar. 60 saniye sonunda en çok hücreye sahip olan turu kazanır, 8 saniye sonra yeni tur başlar. Odada tek başınaysan iki bot seninle oynar, bir arkadaşın girince botlar çıkar.</p>
+      <p class="rules">Bir hücreye dokun ya da parmağını sürükle. Hücreyi en son boyayan sahibi olur. Her 6 boyamada bir bomba kazanırsın; bomba 3×3 alanı tek dokunuşta boyar. 60 saniye sonunda en çok hücreye sahip olan turu kazanır, 8 saniye sonra yeni tur başlar. Botlarla oyna modunda sadece sen ve iki bot olursun. Rastgele ve özel odalarda bot yoktur, yalnızca gerçek oyuncular vardır.</p>
     </aside>
   </main>
 </div>
@@ -194,7 +194,9 @@ h1{margin:0;font:800 clamp(26px,5vw,36px)/1 var(--f-display);letter-spacing:-.02
     <input type="text" id="nameInput" maxlength="14" placeholder="Örn. Elif" enterkeyhint="go">
     <span class="lb" id="inkLbl">Mürekkebin</span>
     <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="inkLbl"></div>
-    <button class="btn" type="submit" id="quickBtn">Hızlı oyun</button>
+    <button class="btn" type="submit" id="quickBtn">Rastgele oyuncularla oyna</button>
+    <button class="btn ghost" type="button" id="soloBtn">Botlarla oyna</button>
+    <p>Rastgele: aynı anda oynayan gerçek oyuncularla eşleşirsin. Botlarla: sadece sen ve iki bot olursun.</p>
     <div class="sep">veya arkadaşlarınla</div>
     <label class="lb" for="codeInput">Oda kodu</label>
     <div class="codeRow">
@@ -290,7 +292,7 @@ function send(obj){
   if(ws&&ws.readyState===1){try{ws.send(JSON.stringify(obj));}catch(e){}}
 }
 function setJoinBusy(busy){
-  $('quickBtn').disabled=busy;$('roomBtn').disabled=busy;
+  $('quickBtn').disabled=busy;$('soloBtn').disabled=busy;$('roomBtn').disabled=busy;
 }
 function joinMessage(text,isErr){
   var m=$('joinMsg');m.textContent=text;m.classList.toggle('err',!!isErr);
@@ -338,6 +340,7 @@ function startJoin(mode,roomCode){
   connect();
 }
 $('joinForm').addEventListener('submit',function(e){e.preventDefault();startJoin('quick','');});
+$('soloBtn').addEventListener('click',function(){startJoin('solo','');});
 $('roomBtn').addEventListener('click',function(){
   var c=cleanCode($('codeInput').value);
   if(!c)c=randomCode();
@@ -358,7 +361,7 @@ function handle(m){
     me.bombs=m.b|0;me.taps=m.k|0;me.armed=false;
     result=m.res||null;
     online=true;retryMs=1000;pending=false;me.joined=true;
-    target={mode:'code',code:code};
+    if(target.mode==='code')target={mode:'code',code:code};
     joinEl.hidden=true;setJoinBusy(false);
     try{history.replaceState(null,'','?oda='+code);}catch(e){}
     try{board.focus({preventScroll:true});}catch(e){}

@@ -163,7 +163,8 @@ function start(opts) {
       if (m.t === 'join' && !player) {
         let target;
         const code = typeof m.code === 'string' ? m.code.toUpperCase() : '';
-        if (m.mode === 'code' && CODE_RE.test(code)) target = lobby.byCode(code);
+        if (m.mode === 'solo') target = lobby.solo();
+        else if (m.mode === 'code' && CODE_RE.test(code)) target = lobby.byCode(code);
         else target = lobby.quick();
         const p = target.addHuman({
           name: cleanName(m.n),
